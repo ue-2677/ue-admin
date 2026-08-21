@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大樓巡邏系統 - 雲端電腦後台</title>
+    <!-- 引入 html2pdf 庫，用於匯出 PDF 功能 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --primary: #1a73e8; --bg: #f4f6f9; --text: #333; --sidebar: #2c3338; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --info: #17a2b8;}
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 250px; background-color: var(--sidebar); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #404850; text-align: center; letter-spacing: 1px; }
+        .nav-menu { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+        .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #3a4248; transition: 0.2s; display: flex; align-items: center; gap: 10px; font-size: 15px; }
+        .nav-item:hover, .nav-item.active { background-color: var(--primary); color: white; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .topbar h2 { margin: 0; font-size: 22px; }
+        .content-body { padding: 30px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); position: relative; }
+        .stat-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #666; }
+        .stat-card .value { font-size: 28px; font-weight: bold; transition: color 0.3s; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 25px; }
+        .card-header { padding: 15px 20px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; }
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tab-btn { padding: 12px 25px; cursor: pointer; border: none; background: transparent; font-size: 16px; font-weight: bold; color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: 0.2s; }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: #333; }
+        .btn-info { background: var(--info); color: white; }
+        .btn:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.5; }
+        th { background-color: #f8f9fa; color: #555; font-weight: 600; }
+        tr:hover { background-color: #fcfcfc; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .badge-success { background-color: #d4edda; color: #155724; }
+        .badge-warning { background-color: #fff3cd; color: #856404; }
+        .badge-danger { background-color: #f8d7da; color: #721c24; }
+        .badge-info { background-color: #cce5ff; color: #004085; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 700px; max-width: 95%; max-height: 85vh; overflow-y: auto; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 14px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .form-control:read-only { background-color: #e9ecef; cursor: not-allowed; }
+        .point-input-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; transition: all 0.3s ease; }
+        .view-section { display: none; animation: fadeIn 0.3s; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 登入畫面樣式 */
+        #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--sidebar); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: white; padding: 40px; border-radius: 10px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .login-box h2 { text-align: center; margin-top: 0; margin-bottom: 25px; color: var(--sidebar); }
+        .live-indicator { position: absolute; top: 20px; right: 20px; width: 10px; height: 10px; background-color: #28a745; border-radius: 50%; box-shadow: 0 0 8px #28a745; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h2>🏢 雲端後台登入</h2>
+            <div class="form-group"><label>登入帳號</label><input type="text" id="loginUsername" class="form-control" placeholder="請輸入帳號"></div>
+            <div class="form-group"><label>登入密碼</label><input type="password" id="loginPassword" class="form-control" placeholder="請輸入密碼"></div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 15px; font-size: 16px; padding: 10px;" onclick="window.performLogin()">登 入</button>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebarContainer" style="display: none;">
+        <div class="sidebar-header">🏢 雲端物業後台</div>
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="window.switchAdminView('view-dashboard', this)">📊 即時儀表板</li>
+            <li class="nav-item" onclick="window.switchAdminView('view-management', this)">🗺️ 路線與點位管理</li>
+            <li class="nav-item" onclick="window.switchAdminView('view-users', this)">👥 人員與權限管理</li>
+            <li class="nav-item" onclick="window.open('engineering.html', '_blank')">🔧 工程部派單後台</li>
+            <li class="nav-item" onclick="window.open('cleaning.html', '_blank')">🧹 清潔部派單後台</li>
+            <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
+        </ul>
+        <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.1 (報事系統整合版)</p></div>
+    </div>
+
+    <div class="main-content" id="mainContentContainer" style="display: none;">
+        <div class="topbar">
+            <h2 id="topbarTitle">總覽儀表板 <span style="font-size: 12px; color: var(--success); font-weight: normal; margin-left: 10px;">🟢 即時連線中</span></h2>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="clock" style="font-size: 14px; color: #666;"></span>
+                <div style="border-left: 1px solid #ccc; height: 20px;"></div>
+                <span id="currentUserDisplay" style="font-weight: bold; color: var(--primary); font-size: 15px;"></span>
+                <button class="btn btn-warning" style="padding: 6px 12px; font-size: 13px;" onclick="window.openSelfPasswordModal()">🔑 改密碼</button>
+                <button class="btn btn-success" style="padding: 6px 12px; font-size: 13px;" onclick="window.refreshCurrentView()">🔄 刷新資料</button>
+                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;" onclick="window.performLogout()">🚪 登出</button>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <!-- 視圖 1：總覽儀表板 -->
+            <div id="view-dashboard" class="view-section active">
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-left-color: var(--primary);"><div class="live-indicator"></div><h3>總任務數</h3><div class="value" id="statTotal">0</div></div>
+                    <div class="stat-card" style="border-left-color: var(--success);"><div class="live-indicator"></div><h3>正常完成任務</h3><div class="value" id="statCompleted">0</div></div>
+                    <div class="stat-card" style="border-left-color: var(--danger);"><div class="live-indicator"></div><h3>⚠️ 異常跳過點位數</h3><div class="value" id="statSkipped" style="color: var(--danger);">0</div></div>
+                    <div class="stat-card" style="border-left-color: var(--info);"><div class="live-indicator"></div><h3>📢 異常報事總數</h3><div class="value" id="statIncidents" style="color: var(--info);">0</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">巡邏任務即時監控列表</div>
+                    <table>
+                        <thead><tr><th>路線名稱</th><th>負責人員</th><th>實際開始時間</th><th>進度</th><th>任務提示</th><th>狀態</th><th>操作</th></tr></thead>
+                        <tbody id="taskTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 視圖 2：路線與點位管理 -->
+            <div id="view-management" class="view-section">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="window.switchTab('tab-routes', this)">🗺️ 巡邏路線管理</button>
+                    <button class="tab-btn" onclick="window.switchTab('tab-points', this)">📍 基礎點位庫管理</button>
+                </div>
+
+                <div id="tab-routes" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            現有巡邏路線 
+                            <div style="display: flex; gap: 8px;">
+                                <input type="file" id="importRouteFile" style="display:none;" accept=".json" onchange="window.handleImportRoutes(event)">
+                                <button class="btn btn-info" onclick="document.getElementById('importRouteFile').click()">📥 匯入路線</button>
+                                <button class="btn btn-warning" onclick="window.exportRoutesBackup()">📤 備份路線</button>
+                                <button class="btn btn-primary" onclick="window.openRouteModal()">➕ 新增路線</button>
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">排序</th><th style="width: 15%;">路線名稱</th><th style="width: 8%;">狀態</th>
+                                    <th style="width: 10%;">點位數</th><th style="width: 45%;">巡邏點列表 (含獨立限時)</th><th style="width: 17%;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="routesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-points" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">基礎巡邏點位資料庫 <button class="btn btn-primary" onclick="window.openPointModal()">➕ 新增巡邏點</button></div>
+                        <div style="padding: 15px; background: #fff3cd; color: #856404; font-size: 13px; border-bottom: 1px solid #eee;">
+                            💡 提示：請先在此處建立大樓所有的巡邏地點。建立後，即可在「巡邏路線管理」中組合路線。
+                        </div>
+                        <table>
+                            <thead>
+                                <tr><th style="width: 25%;">樓層 / 區域</th><th style="width: 25%;">位置名稱</th><th style="width: 35%;">已綁定晶片 ID (UID)</th><th style="width: 15%;">操作</th></tr>
+                            </thead>
+                            <tbody id="pointsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 視圖 3：人員管理 -->
+            <div id="view-users" class="view-section">
+                <div class="card">
+                    <div class="card-header">
+                        巡邏人員與權限管理 
+                        <button class="btn btn-primary" onclick="window.openUserModal()">➕ 新增人員</button>
+                    </div>
+                    <div style="padding: 15px; background: #e2e3e5; color: #383d41; font-size: 13px; border-bottom: 1px solid #eee;" id="subAdminNotice">
+                        💡 提示：最高管理員可編輯所有帳號；二級管理員僅能查看及新增，無法修改或刪除他人帳號。
+                    </div>
+                    <table>
+                        <thead><tr><th>帳號</th><th>姓名</th><th>密碼</th><th>權限等級</th><th>操作</th></tr></thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="view-delete-logs" class="view-section">
+        <div class="card">
+            <div class="card-header">🗑️ 系統刪除稽核軌跡 (Audit Trail)</div>
+            <table>
+                <thead><tr><th>刪除時間</th><th>操作人員</th><th>刪除項目類型</th><th>被刪除資料內容</th></tr></thead>
+                <tbody id="deleteLogsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- ================== 彈窗 Modal 區塊 ================== -->
+    
+    <!-- 任務稽核明細表 -->
+    <div id="taskDetailModal" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <h3 id="taskDetailTitle">任務詳細資訊</h3>
+            <div id="taskExportArea">
+                <div id="taskDetailContent"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-info" style="flex: 1;" onclick="window.exportTaskToPDF()">📄 匯出成 PDF</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="window.closeModal('taskDetailModal')">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+    <div id="dispatchModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <h3 style="color: var(--primary);">📤 轉派異常報事</h3>
+            <p style="font-size:13px; color:#666; margin-top:-10px;">回報地點：<strong id="dispatchLocation"></strong></p>
+            
+            <div class="form-group">
+                <label>轉派至哪個部門？</label>
+                <select id="dispatchDept" class="form-control">
+                    <option value="工程部">🔧 工程部</option>
+                    <option value="清潔部">🧹 清潔部</option>
+                </select>
+            </div>
+    
+            <div class="form-group">
+                <label>工單內容說明 (可補充修改)</label>
+                <textarea id="dispatchText" class="form-control" rows="4"></textarea>
+            </div>
+    
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.submitWorkOrder()">建立工單</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="document.getElementById('dispatchModal').classList.remove('active')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/編輯巡邏點位 -->
+    <div id="pointModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <h3 id="pointModalTitle">新增巡邏點位</h3>
+            <input type="hidden" id="editPointId">
+            <div class="form-group">
+                <label>樓層 / 區域</label>
+                <input type="text" id="pointModalFloor" class="form-control" placeholder="例如：A棟 1F" list="floorDatalist">
+                <datalist id="floorDatalist"></datalist>
+                <div id="quickFloorKeywords" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
+            </div>
+            <div class="form-group"><label>位置名稱</label><input type="text" id="pointModalName" class="form-control" placeholder="例如：迎賓大廳"></div>
+            <div class="form-group"><label>晶片 ID (UID) - 可選</label><input type="text" id="pointModalUid" class="form-control" placeholder="留空可由前台手機 APP 綁定"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.savePoint()">儲存至雲端</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('pointModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/編輯巡邏路線 -->
+    <div id="routeModal" class="modal">
+        <div class="modal-content" style="width:750px;">
+            <h3 id="routeModalTitle">新增巡邏路線</h3>
+            <input type="hidden" id="editRouteId">
+            <div class="form-group"><label>路線名稱</label><input type="text" id="routeModalName" class="form-control" placeholder="例如：C棟 地下停車場巡視"></div>
+            
+            <div class="form-group" style="display: flex; gap: 15px;">
+                <div style="flex: 1;"><label>顯示順序</label><input type="number" id="routeModalOrder" class="form-control" value="1"></div>
+                <div style="flex: 1.2;"><label>統一點位限時 (分，0為無)</label><input type="number" id="routeModalGlobalInterval" class="form-control" value="0" min="0" placeholder="未設獨立限時將套用此值"></div>
+                <div style="flex: 1; display: flex; align-items: center; padding-top: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="routeModalActive" style="width: 18px; height: 18px;" checked>
+                        <span style="font-weight: bold; color: var(--primary);">是否啟用</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <span>設定巡邏點與順序</span>
+                    <span style="font-size: 12px; font-weight: normal; color: #666;">*修改編號可自動排序，限時設為0表示無限制</span>
+                </label>
+                <div id="pointsInputContainer"></div>
+                <button type="button" class="btn btn-warning" style="width: 100%; margin-top: 10px;" onclick="window.addPointInputRow()">➕ 從資料庫加入巡邏點</button>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.saveRoute()">儲存路線</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('routeModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/編輯人員 -->
+    <div id="userModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <h3 id="userModalTitle">新增巡邏人員帳號</h3>
+            <input type="hidden" id="editOriginalUsername">
+            <div class="form-group"><label>登入帳號 (Username)</label><input type="text" id="userModalUsername" class="form-control" placeholder="不可重複"></div>
+            <div class="form-group"><label>姓名 (顯示名稱)</label><input type="text" id="userModalName" class="form-control"></div>
+            <div class="form-group"><label>登入密碼</label><input type="text" id="userModalPassword" class="form-control"></div>
+            <div class="form-group">
+                <label>權限等級</label>
+                <select id="userModalRole" class="form-control">
+                    <option value="user">一般巡邏員 (手機前台用)</option>
+                    <option value="engineering">工程部人員 (專屬派單後台)</option>
+                    <option value="cleaning">清潔部人員 (專屬派單後台)</option>
+                    <option value="sub_admin">二級管理員 (電腦後台部分權限)</option>
+                    <option value="admin">最高管理員 (電腦後台全權限)</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.saveUser()">儲存帳號</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('userModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 更改個人密碼 -->
+    <div id="selfPasswordModal" class="modal">
+        <div class="modal-content" style="width:400px;">
+            <h3>更改個人密碼</h3>
+            <div class="form-group"><label>目前的舊密碼</label><input type="password" id="selfOldPassword" class="form-control"></div>
+            <div class="form-group"><label>設定新密碼</label><input type="password" id="selfNewPassword" class="form-control"></div>
+            <div class="form-group"><label>再次確認新密碼</label><input type="password" id="selfConfirmPassword" class="form-control"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.saveSelfPassword()">確認更新</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('selfPasswordModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- Firebase SDK 與雲端核心邏輯 (使用 Module) -->
+    <!-- ============================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, setDoc, query, orderBy, getDocs, where } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
+            authDomain: "test-ue-app.firebaseapp.com",
+            projectId: "test-ue-app",
+            storageBucket: "test-ue-app.firebasestorage.app",
+            messagingSenderId: "203707145209",
+            appId: "1:203707145209:web:647068d7d0e4b843b47b28"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 宣告全域變數 (修復 adminScannedUid 遺失問題)
+        let dbUsers = {};
+        let dbRoutes = [];
+        let dbPoints = [];
+        let dbUidMappings = {};
+        let dbTasks = [];
+        let currentUser = null;
+        let adminScannedUid = "";
+
+        // 🌟 啟動雲端即時監聽
+        function initRealtimeListeners() {
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
+                if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
+            });
+
+            onSnapshot(collection(db, "points"), (snapshot) => {
+                dbPoints = []; snapshot.forEach(doc => { dbPoints.push({ id: doc.id, ...doc.data() }); });
+                if(document.getElementById('view-management').classList.contains('active')) window.loadPointsData();
+            });
+
+            onSnapshot(collection(db, "routes"), (snapshot) => {
+                dbRoutes = []; snapshot.forEach(doc => { dbRoutes.push({ id: doc.id, ...doc.data() }); });
+                if(document.getElementById('view-management').classList.contains('active')) window.loadRoutesData();
+            });
+
+            onSnapshot(collection(db, "uidMappings"), (snapshot) => {
+                dbUidMappings = {}; snapshot.forEach(doc => { dbUidMappings[doc.id] = doc.data().locationName; });
+                if(document.getElementById('view-management').classList.contains('active')) window.loadPointsData();
+            });
+
+            onSnapshot(query(collection(db, "tasks"), orderBy("startTimestamp", "desc")), (snapshot) => {
+                dbTasks = []; snapshot.forEach(doc => { dbTasks.push({ id: doc.id, ...doc.data() }); });
+                if(document.getElementById('view-dashboard').classList.contains('active')) window.loadDashboardData();
+            });
+        }
+
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
+        
+        window.onload = () => { 
+            initRealtimeListeners();
+            window.checkAuth(); 
+        };
+// 共用函數：將刪除動作寫入 deleteLogs
+        window.logDeletion = async function(itemType, deletedData) {
+            await addDoc(collection(db, "deleteLogs"), {
+                deletedAt: new Date().toLocaleString(),
+                deletedTimestamp: Date.now(),
+                deletedBy: currentUser.name + " (" + currentUser.username + ")",
+                itemType: itemType, // 例如 "工單", "路線", "帳號"
+                dataSnapshot: JSON.stringify(deletedData) // 把原本的資料轉成字串備存
+            });
+        };
+        
+        // 在 admin_dashboard.html 加入對 deleteLogs 的 onSnapshot 監聽
+        onSnapshot(query(collection(db, "deleteLogs"), orderBy("deletedTimestamp", "desc")), (snapshot) => {
+            const tbody = document.getElementById('deleteLogsTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            snapshot.forEach(doc => {
+                const log = doc.data();
+                tbody.innerHTML += `<tr>
+                    <td>${log.deletedAt}</td>
+                    <td style="color:var(--danger); font-weight:bold;">${log.deletedBy}</td>
+                    <td><span class="badge badge-warning">${log.itemType}</span></td>
+                    <td><textarea readonly style="width:100%; height:50px; font-size:11px;">${log.dataSnapshot}</textarea></td>
+                </tr>`;
+            });
+        });
+        // ==========================================
+        // 全域函數掛載
+        // ==========================================
+        
+        window.checkAuth = function() {
+            const loggedInUserStr = sessionStorage.getItem('loggedInAdminUser');
+            if (!loggedInUserStr) {
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('sidebarContainer').style.display = 'none';
+                document.getElementById('mainContentContainer').style.display = 'none';
+            } else {
+                currentUser = JSON.parse(loggedInUserStr);
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('sidebarContainer').style.display = 'flex';
+                document.getElementById('mainContentContainer').style.display = 'flex';
+                
+                let roleName = (currentUser.role === 'admin') ? '最高管理員' : (currentUser.role === 'sub_admin' ? '二級管理員' : '一般巡邏員');
+                document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (${roleName})`;
+                window.loadDashboardData();
+            }
+        };
+
+        window.performLogin = function() {
+            const un = document.getElementById('loginUsername').value.trim();
+            const pw = document.getElementById('loginPassword').value.trim();
+            if (!un || !pw) { alert("請輸入帳號與密碼！"); return; }
+            if (dbUsers[un] && dbUsers[un].password === pw) {
+                const role = dbUsers[un].role || 'user';
+                if (role !== 'admin' && role !== 'sub_admin') {
+                    alert("權限不足，一般巡邏員僅能登入手機前台 APP！"); return;
+                }
+                sessionStorage.setItem('loggedInAdminUser', JSON.stringify({ username: un, name: dbUsers[un].name, role: role }));
+                window.checkAuth();
+            } else { alert("帳號或密碼錯誤！"); }
+        };
+
+        window.performLogout = function() {
+            sessionStorage.removeItem('loggedInAdminUser'); currentUser = null;
+            document.getElementById('loginUsername').value = ''; document.getElementById('loginPassword').value = '';
+            window.checkAuth();
+        };
+
+        window.refreshCurrentView = function() {
+            if(document.getElementById('view-dashboard').classList.contains('active')) window.loadDashboardData();
+            if(document.getElementById('view-management').classList.contains('active')) { window.loadRoutesData(); window.loadPointsData(); }
+            if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
+        };
+
+        window.switchAdminView = function(viewId, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('topbarTitle').innerText = element.innerText.substring(3);
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            window.refreshCurrentView();
+        };
+
+        window.switchTab = function(tabId, element) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        };
+
+        window.closeModal = function(modalId) { document.getElementById(modalId).classList.remove('active'); };
+
+        // --- 儀表板資料載入與整合邏輯修復 ---
+        window.loadDashboardData = function() {
+            const tbody = document.getElementById('taskTableBody'); tbody.innerHTML = '';
+            let completedCount = 0, ongoingCount = 0, totalSkipped = 0, totalIncidents = 0;
+            
+            if (dbTasks.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">目前尚無任務紀錄。</td></tr>'; 
+            } else {
+                dbTasks.forEach(task => {
+                    if (task.status === 'completed') completedCount++; else ongoingCount++;
+                    
+                    const skippedInTask = (task.skippedPoints || []).length;
+                    const incidentsInTask = (task.incidents || []).length;
+                    totalSkipped += skippedInTask;
+                    totalIncidents += incidentsInTask;
+
+                    let alertBadge = '';
+                    if (skippedInTask > 0) alertBadge += `<span class="badge badge-danger" style="margin-right:4px;">⚠️ 跳過 ${skippedInTask}</span>`;
+                    if (incidentsInTask > 0) alertBadge += `<span class="badge badge-info">📢 報事 ${incidentsInTask}</span>`;
+                    if (alertBadge === '') alertBadge = '<span class="badge badge-success">正常無異常</span>';
+
+                    const statusBadge = task.status === 'completed' ? `<span class="badge badge-success">已完成</span>` : `<span class="badge badge-warning" style="color:#333;">執行中</span>`;
+                    
+                    // 抓取真實的第一筆打卡時間
+                    const actualStartTimeStr = (task.pointLogs && task.pointLogs.length > 0) ? task.pointLogs[0].timeStr : '<span style="color:#999;">尚未開始</span>';
+
+                    tbody.innerHTML += `<tr>
+                        <td><strong>${task.routeName}</strong></td>
+                        <td>${task.guardName || '未登記'}</td>
+                        <td style="font-family:monospace; color:#555;">${actualStartTimeStr}</td>
+                        <td>${task.currentPointIndex} / ${task.points.length}</td>
+                        <td>${alertBadge}</td>
+                        <td>${statusBadge}</td>
+                        <td><button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;" onclick="window.viewTaskDetail('${task.id}')">🔍 查看報表</button></td>
+                    </tr>`;
+                });
+            }
+            
+            document.getElementById('statTotal').innerText = dbTasks.length; 
+            document.getElementById('statCompleted').innerText = completedCount;
+            document.getElementById('statOngoing').innerText = ongoingCount; 
+            document.getElementById('statSkipped').innerText = totalSkipped;
+            if(document.getElementById('statIncidents')) document.getElementById('statIncidents').innerText = totalIncidents;
+        };
+
+        window.viewTaskDetail = function(taskId) {
+            const task = dbTasks.find(t => t.id === taskId);
+            if (!task) return;
+            const routeDef = dbRoutes.find(r => r.name === task.routeName);
+            document.getElementById('taskDetailTitle').innerText = `📋 任務報表：${task.routeName}`;
+            
+            const logs = task.pointLogs || [];
+            const incidents = task.incidents || [];
+            
+            let trueStartTimeHtml = '<span style="color:#999; font-size:12px;">尚未開始</span>';
+            let totalTimeHtml = '<span style="color:#999; font-size:12px;">尚未開始</span>';
+            let endTimeHtml = '<span style="color:#999; font-size:12px;">尚未完成</span>';
+
+            if (task.status === 'completed') endTimeHtml = task.endTime || (logs.length > 0 ? new Date(logs[logs.length - 1].timestamp).toLocaleString() : '未知');
+            
+            if (logs.length > 0) {
+                trueStartTimeHtml = new Date(logs[0].timestamp).toLocaleString();
+                const totalSec = Math.floor((logs[logs.length - 1].timestamp - logs[0].timestamp) / 1000);
+                const m = Math.floor(totalSec / 60); const s = totalSec % 60;
+                totalTimeHtml = `<strong style="color:var(--primary); font-size: 18px;">${m} 分 ${s} 秒</strong>`;
+            }
+
+            let html = `
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:15px; border: 1px solid #eee; display:flex; justify-content:space-between;">
+                    <div>
+                        <p style="margin:0 0 8px 0; font-size:14px;"><strong>巡邏人員：</strong> ${task.guardName || '未登記'}</p>
+                        <p style="margin:0 0 8px 0; font-size:14px; color:#666;"><strong>建立任務：</strong> ${task.startTime}</p>
+                        <p style="margin:0 0 8px 0; font-size:14px; color:var(--primary);"><strong>實際開始：</strong> ${trueStartTimeHtml}</p>
+                        <p style="margin:0; font-size:14px;"><strong>完成時間：</strong> ${endTimeHtml}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <p style="margin:0 0 8px 0; font-size:14px;"><strong>實際總耗時：</strong></p>
+                        ${totalTimeHtml}
+                    </div>
+                </div>
+                <div id="taskTableContainer" style="border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px;">
+                    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                        <thead style="background: #f0f2f5;">
+                            <tr>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">巡邏點</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">狀態</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">打卡時間</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">距上點耗時</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd; width:20%;">備註 (手寫區)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            let previousTimestamp = null; // 從實際第一筆記錄開始計算距上點耗時
+
+            task.points.forEach((pt, idx) => {
+                const log = logs.find(l => l.pointName === pt);
+                const incident = incidents.find(i => i.pointName === pt);
+                let statusBadge, timeStr = '-', gapStr = '-', exceededText = '';
+                
+                let maxIntervalSec = 0;
+                if (routeDef) {
+                    let pointInterval = (routeDef.pointIntervals && routeDef.pointIntervals[idx]) ? routeDef.pointIntervals[idx] : 0;
+                    let globalInterval = routeDef.globalInterval || 0;
+                    let appliedInterval = pointInterval > 0 ? pointInterval : globalInterval;
+                    maxIntervalSec = appliedInterval * 60;
+                }
+
+                if (log) {
+                    timeStr = log.timeStr;
+                    if (previousTimestamp === null) {
+                        gapStr = `<span style="color:#28a745; font-weight:bold;">📍 起始點</span>`;
+                    } else {
+                        const gapSec = Math.floor((log.timestamp - previousTimestamp) / 1000);
+                        const gm = Math.floor(gapSec / 60); const gs = gapSec % 60;
+                        if (maxIntervalSec > 0 && gapSec > maxIntervalSec) {
+                            const overSec = gapSec - maxIntervalSec;
+                            const om = Math.floor(overSec / 60); const os = overSec % 60;
+                            exceededText = `超時 ${om}分${os}秒`;
+                            gapStr = `<span style="color:var(--danger); font-weight:bold;">${gm}分${gs}秒 ❗️</span>`;
+                        } else {
+                            gapStr = gm > 0 ? `<span style="color:#1a73e8; font-weight:bold;">${gm}分${gs}秒</span>` : `${gs}秒`;
+                        }
+                    }
+                    previousTimestamp = log.timestamp;
+                    statusBadge = log.isSkipped ? `<span class="badge badge-danger">⚠️ 跳過</span>` : `<span class="badge badge-success">✅ 正常</span>`;
+                } else if (task.skippedPoints && task.skippedPoints.includes(pt)) {
+                    statusBadge = `<span class="badge badge-danger">⚠️ 跳過</span>`;
+                } else if (idx < task.currentPointIndex) {
+                    statusBadge = `<span class="badge badge-success">✅ 正常</span>`;
+                } else {
+                    statusBadge = `<span style="color:#888;">⏳ 尚未巡檢</span>`;
+                }
+
+                let incidentHtml = '';
+                if (incident) {
+                    incidentHtml = `<div style="margin-top: 5px; padding: 5px; background: #e0f7fa; border-radius: 4px; font-size: 11px; color: #006064;">
+                        <strong>📢 報事：</strong>${incident.text || '已上傳現場照片'}
+                    </div>`;
+                }
+
+                const remarkContent = exceededText 
+                    ? `<div style="color:var(--danger); font-size: 12px; font-weight:bold; margin-bottom: 2px;">${exceededText}</div><div style="border-bottom: 1px dashed #999; height: 10px; width: 100%;"></div>`
+                    : `<div style="border-bottom: 1px dashed #999; height: 20px; width: 100%;"></div>`;
+
+                html += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:10px;"><strong>${pt}</strong>${incidentHtml}</td>
+                    <td style="padding:10px;">${statusBadge}</td>
+                    <td style="padding:10px; font-family:monospace; color:#555;">${timeStr}</td>
+                    <td style="padding:10px; color:#666;">${gapStr}</td>
+                    <td style="padding:10px;">${remarkContent}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            // 將獨立報事資料呈現於下方
+            if (incidents.length > 0) {
+        html += `<h4 style="margin-top:20px; color:var(--danger); border-bottom:1px solid #eee; padding-bottom:8px;">🚨 異常報事紀錄 (${incidents.length} 筆)</h4>`;
+        incidents.forEach((inc, index) => { // 這裡加入 index
+            html += `
+            <div style="border:1px solid #f5c6cb; background:#fdfdfe; padding:15px; border-radius:6px; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <p style="margin:0 0 8px 0; font-size:14px;"><strong>📍 回報地點：</strong>${inc.pointName}</p>
+                    <span style="color:#888; font-size:12px;">⏰ ${inc.timeStr}</span>
+                </div>
+                <div style="margin:0 0 12px 0; font-size:14px; background:#f8f9fa; padding:10px; border-radius:4px; border:1px solid #eee;">
+                    <strong>📝 描述說明：</strong><br>
+                    <span style="color:#333; line-height:1.5;">${inc.text || '<span style="color:#aaa;">無文字說明</span>'}</span>
+                </div>
+                ${inc.photo ? `<div style="text-align:center; margin-bottom:10px;"><img src="${inc.photo}" style="max-height:200px; border-radius:6px;"></div>` : ''}
+                
+                <!-- 新增這顆派發按鈕 -->
+                <button class="btn btn-info" style="width:100%; padding:8px;" onclick="window.openDispatchModal('${task.id}', ${index})">
+                    📤 轉派給其他部門
+                </button>
+            </div>`;
+        });
+    }
+
+            document.getElementById('taskDetailContent').innerHTML = html;
+            document.getElementById('taskDetailModal').classList.add('active');
+        };
+
+        // 修復：PDF 匯出時暫時移除捲軸，確保能完整匯出長表格
+        window.exportTaskToPDF = function() {
+            const exportArea = document.getElementById('taskExportArea');
+            const tableContainer = document.getElementById('taskTableContainer');
+            const rawTitle = document.getElementById('taskDetailTitle').innerText.replace(/[\/\\?%*:|"<>]/g, '-');
+            
+            const originalMaxHeight = tableContainer ? tableContainer.style.maxHeight : '';
+            const originalOverflowY = tableContainer ? tableContainer.style.overflowY : '';
+            if (tableContainer) { tableContainer.style.maxHeight = 'none'; tableContainer.style.overflowY = 'visible'; }
+
+            html2pdf().set({
+                margin: 10, filename: `${rawTitle}_報表.pdf`, image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(exportArea).save().then(() => {
+                if (tableContainer) { tableContainer.style.maxHeight = originalMaxHeight; tableContainer.style.overflowY = originalOverflowY; }
+            });
+        };
+
+        // --- 管理員 NFC 晶片綁定相關邏輯與錯誤修復 ---
+        function showMsg(id, text, type) { const b = document.getElementById(id); b.style.display = 'block'; b.className = `msg-box msg-${type}`; b.innerHTML = text; }
+        function hideMsg(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function resetAdminBtn() {
+            const btn = document.getElementById('adminScanBtn');
+            btn.innerText = "📲 重新掃描晶片"; btn.className = "btn btn-primary";
+        }
+
+        window.adminScanNfc = async function() {
+            const btn = document.getElementById('adminScanBtn');
+            try {
+                let nfcReader = new NDEFReader(); await nfcReader.scan();
+                btn.innerText = "⏳ 正在感應..."; btn.className = "btn btn-warning"; hideMsg('adminMsg');
+                
+                nfcReader.onreading = event => {
+                    adminScannedUid = event.serialNumber;
+                    document.getElementById('adminUidDisplay').innerText = adminScannedUid;
+                    document.getElementById('adminCurrentLoc').innerText = dbUidMappings[adminScannedUid] || "尚未綁定任何地點";
+                    document.getElementById('adminLocationSelect').value = dbUidMappings[adminScannedUid] || "";
+                    document.getElementById('adminResult').style.display = 'block';
+                    showMsg('adminMsg', `✅ 讀取成功！請確認或更新綁定。`, 'success');
+                    nfcReader.abort(); resetAdminBtn();
+                };
+                
+                // 恢復被遺漏的 NFC 錯誤監聽
+                nfcReader.onreadingerror = () => { 
+                    showMsg('adminMsg', "⚠️ 讀取失敗，請重新感應。", "error"); 
+                    resetAdminBtn();
+                };
+            } catch (error) { 
+                showMsg('adminMsg', "❌ 設備不支援 NFC 或尚未授權。", "error"); 
+                resetAdminBtn();
+            }
+        };
+
+        window.adminUpdateMapping = async function() {
+            const selectedLoc = document.getElementById('adminLocationSelect').value;
+            if (!selectedLoc || !adminScannedUid) { showMsg('adminMsg', "❌ 請選擇地點並確保已掃描晶片", "error"); return; }
+            
+            try {
+                await setDoc(doc(db, "uidMappings", adminScannedUid), { locationName: selectedLoc });
+                document.getElementById('adminCurrentLoc').innerText = selectedLoc;
+                showMsg('adminMsg', `✅ 雲端更新成功！`, 'success');
+            } catch(e) { showMsg('adminMsg', `❌ 更新失敗`, 'error'); }
+        };
+
+        // --- 點位管理 ---
+        window.loadPointsData = function() {
+            const tbody = document.getElementById('pointsTableBody'); tbody.innerHTML = '';
+            dbPoints.forEach((pt) => {
+                const fullPtName = `${pt.floor} ${pt.name}`;
+                let boundUids = Object.keys(dbUidMappings).filter(k => dbUidMappings[k] === fullPtName);
+                let uidDisplay = boundUids.length > 0 ? `<code style="color: var(--primary);">${boundUids.join(', ')}</code>` : '<span style="color:#999;">尚未綁定</span>';
+                tbody.innerHTML += `<tr><td><strong>${pt.floor}</strong></td><td>${pt.name}</td><td>${uidDisplay}</td>
+                    <td><button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editPoint('${pt.id}')">✏️ 編輯</button>
+                    <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deletePoint('${pt.id}')">🗑️ 刪除</button></td></tr>`;
+            });
+        };
+
+        window.openPointModal = function(ptId = null) {
+            const uniqueFloors = [...new Set(dbPoints.map(p => p.floor))];
+            const dataList = document.getElementById('floorDatalist');
+            const kwContainer = document.getElementById('quickFloorKeywords');
+            
+            dataList.innerHTML = '';
+            kwContainer.innerHTML = '<span style="font-size:12px; color:#666;">快速加入：</span>';
+            const commonKeywords = ['A棟', 'B棟', '1F', 'B1', 'RF'];
+            commonKeywords.forEach(kw => { kwContainer.innerHTML += `<span class="badge badge-warning" style="cursor:pointer; user-select:none;" onclick="window.appendFloorText('${kw}')">+ ${kw}</span>`; });
+            uniqueFloors.forEach(f => {
+                dataList.innerHTML += `<option value="${f}"></option>`;
+                if (!commonKeywords.includes(f)) { kwContainer.innerHTML += `<span class="badge badge-info" style="cursor:pointer; user-select:none;" onclick="window.setFloorText('${f}')">${f}</span>`; }
+            });
+
+            if (ptId !== null) {
+                const pt = dbPoints.find(p => p.id === ptId);
+                const fullPtName = `${pt.floor} ${pt.name}`;
+                const boundUids = Object.keys(dbUidMappings).filter(k => dbUidMappings[k] === fullPtName);
+                document.getElementById('pointModalTitle').innerText = "編輯巡邏點位"; document.getElementById('editPointId').value = ptId;
+                document.getElementById('pointModalFloor').value = pt.floor; document.getElementById('pointModalName').value = pt.name;
+                document.getElementById('pointModalUid').value = boundUids.length > 0 ? boundUids[0] : "";
+            } else {
+                document.getElementById('pointModalTitle').innerText = "新增巡邏點位"; document.getElementById('editPointId').value = "";
+                document.getElementById('pointModalFloor').value = ""; document.getElementById('pointModalName').value = ""; document.getElementById('pointModalUid').value = "";
+            }
+            document.getElementById('pointModal').classList.add('active');
+        };
+
+        window.appendFloorText = function(text) {
+            const input = document.getElementById('pointModalFloor');
+            if (input.value && !input.value.endsWith(' ')) input.value += ' ' + text; else input.value += text;
+            input.focus();
+        };
+        window.setFloorText = function(text) { document.getElementById('pointModalFloor').value = text; document.getElementById('pointModalFloor').focus(); };
+
+        window.savePoint = async function() {
+            const floor = document.getElementById('pointModalFloor').value.trim(), name = document.getElementById('pointModalName').value.trim();
+            const inputUid = document.getElementById('pointModalUid').value.trim(), editIdx = document.getElementById('editPointId').value;
+            if (!floor || !name) { alert("樓層與位置名為必填！"); return; }
+            const newFullName = `${floor} ${name}`;
+
+            try {
+                if (editIdx !== "") {
+                    const pt = dbPoints.find(p => p.id === editIdx);
+                    const oldFullName = `${pt.floor} ${pt.name}`;
+                    await updateDoc(doc(db, "points", editIdx), { floor, name });
+                    
+                    const updatePromises = [];
+                    if (oldFullName !== newFullName) {
+                        for (let k in dbUidMappings) { 
+                            if (dbUidMappings[k] === oldFullName) updatePromises.push(setDoc(doc(db, "uidMappings", k), { locationName: newFullName })); 
+                        }
+                        for (let r of dbRoutes) {
+                            if (r.points.includes(oldFullName)) {
+                                const newPoints = r.points.map(p => p === oldFullName ? newFullName : p);
+                                updatePromises.push(updateDoc(doc(db, "routes", r.id), { points: newPoints }));
+                            }
+                        }
+                    }
+                    await Promise.all(updatePromises);
+                } else {
+                    await addDoc(collection(db, "points"), { floor, name });
+                }
+
+                const mapPromises = [];
+                for (let k in dbUidMappings) { if (dbUidMappings[k] === newFullName) mapPromises.push(deleteDoc(doc(db, "uidMappings", k))); }
+                if (inputUid) mapPromises.push(setDoc(doc(db, "uidMappings", inputUid), { locationName: newFullName }));
+                await Promise.all(mapPromises);
+
+                window.closeModal('pointModal');
+            } catch(e) { console.error("Error saving point", e); alert("儲存失敗！"); }
+        };
+
+        window.editPoint = function(id) { window.openPointModal(id); };
+        window.deletePoint = async function(id) {
+            if (confirm("確定要刪除這個巡邏點嗎？")) {
+                await deleteDoc(doc(db, "points", id));
+            }
+        };
+
+        // --- 路線管理與備份/匯入 ---
+        window.exportRoutesBackup = function() {
+            const routesData = JSON.stringify(dbRoutes, null, 2);
+            const blob = new Blob([routesData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            a.download = `雲端巡邏路線備份_${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        window.handleImportRoutes = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedData)) throw new Error("無效的檔案格式");
+                    
+                    const userChoice = confirm(`成功讀取了 ${importedData.length} 條路線設定。\n\n[確定] 覆蓋現有所有路線 (舊路線將被刪除)\n[取消] 與現有的路線合併儲存 (新增)`);
+                    
+                    if (userChoice) {
+                        const deletePromises = dbRoutes.map(r => deleteDoc(doc(db, "routes", r.id)));
+                        await Promise.all(deletePromises);
+                    }
+                    
+                    const addPromises = importedData.map(route => {
+                        const payload = {
+                            name: route.name, points: route.points, pointIntervals: route.pointIntervals || [],
+                            routeOrder: route.routeOrder || 999, globalInterval: route.globalInterval || 0, isActive: route.isActive !== false
+                        };
+                        return addDoc(collection(db, "routes"), payload);
+                    });
+                    
+                    await Promise.all(addPromises);
+                    alert("✅ 路線匯入至雲端完成！");
+                } catch (err) {
+                    alert("❌ 匯入失敗：檔案格式不正確或損壞。請確保選擇的是系統產生的 JSON 備份檔。");
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        };
+
+        window.loadRoutesData = function() {
+            const tbody = document.getElementById('routesTableBody'); tbody.innerHTML = '';
+            let routes = [...dbRoutes];
+            routes.sort((a, b) => (a.routeOrder || 999) - (b.routeOrder || 999));
+            routes.forEach((route) => {
+                const globalInt = route.globalInterval || 0;
+                const formattedPoints = route.points.map((pt, i) => {
+                    let interval = (route.pointIntervals && route.pointIntervals[i]) ? route.pointIntervals[i] : 0;
+                    let effectiveInterval = interval > 0 ? interval : globalInt;
+                    let intervalTag = effectiveInterval > 0 ? ` <span style="color:var(--danger); font-size:11px;">(${effectiveInterval}分)</span>` : '';
+                    return `<span style="display:inline-block; margin-bottom:4px;"><b>${i + 1}.</b> ${pt}${intervalTag}</span>`;
+                }).join(' ➔ ');
+                
+                const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
+                tbody.innerHTML += `<tr>
+                    <td><b style="font-size:16px;">${route.routeOrder || '-'}</b></td>
+                    <td><strong>${route.name}</strong></td><td>${statusBadge}</td><td>${route.points.length} 點</td>
+                    <td style="font-size:13px; color:#555;">${formattedPoints}</td>
+                    <td><button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editRoute('${route.id}')">✏️ 編輯</button>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteRoute('${route.id}')">🗑️ 刪除</button></td>
+                </tr>`;
+            });
+        };
+
+        window.openRouteModal = function(routeId = null) {
+            const container = document.getElementById('pointsInputContainer'); container.innerHTML = '';
+            if (routeId) {
+                const route = dbRoutes.find(r => r.id === routeId);
+                document.getElementById('routeModalTitle').innerText = "編輯巡邏路線"; document.getElementById('editRouteId').value = routeId;
+                document.getElementById('routeModalName').value = route.name;
+                document.getElementById('routeModalOrder').value = route.routeOrder || 1;
+                document.getElementById('routeModalGlobalInterval').value = route.globalInterval || 0;
+                document.getElementById('routeModalActive').checked = route.isActive !== false;
+                route.points.forEach((pt, idx) => {
+                    let interval = (route.pointIntervals && route.pointIntervals[idx] !== undefined) ? route.pointIntervals[idx] : 0;
+                    window.addPointInputRow(pt, idx + 1, interval);
+                });
+            } else {
+                document.getElementById('routeModalTitle').innerText = "新增巡邏路線"; document.getElementById('editRouteId').value = "";
+                document.getElementById('routeModalName').value = "";
+                document.getElementById('routeModalOrder').value = dbRoutes.length + 1;
+                document.getElementById('routeModalGlobalInterval').value = 0;
+                document.getElementById('routeModalActive').checked = true;
+                window.addPointInputRow('', 1, 0); window.addPointInputRow('', 2, 0);
+            }
+            document.getElementById('routeModal').classList.add('active');
+        };
+
+        window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxInterval = 0) {
+            const container = document.getElementById('pointsInputContainer');
+            if (orderNumber === null) orderNumber = container.children.length + 1;
+            const uniqueFloors = [...new Set(dbPoints.map(p => p.floor))];
+            
+            let selectedFloor = '', selectedName = '';
+            if (fullPointName) {
+                const found = dbPoints.find(p => `${p.floor} ${p.name}` === fullPointName);
+                if (found) { selectedFloor = found.floor; selectedName = found.name; }
+            }
+
+            let floorOpts = '<option value="">-- 選樓層 --</option>';
+            uniqueFloors.forEach(f => { floorOpts += `<option value="${f}" ${f === selectedFloor ? 'selected' : ''}>${f}</option>`; });
+
+            const div = document.createElement('div'); div.className = 'point-input-row';
+            div.innerHTML = `
+                <input type="number" class="form-control point-order" value="${orderNumber}" onchange="window.handleOrderChange(this)" style="width: 60px; text-align: center; font-weight: bold; background: #e8f0fe;">
+                <select class="form-control point-floor-select" onchange="window.updateNameOptions(this)" style="flex: 1.2;">${floorOpts}</select>
+                <select class="form-control point-name-select" style="flex: 1.5;"><option value="">-- 先選樓層 --</option></select>
+                <input type="number" class="form-control point-interval" value="${maxInterval}" min="0" style="width: 85px;" placeholder="限時(分)" title="距離上個點的超時限制(分鐘)">
+                <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="padding: 10px;">❌</button>`;
+            
+            container.appendChild(div);
+            if (selectedFloor) window.updateNameOptions(div.querySelector('.point-floor-select'), selectedName);
+        };
+
+        window.updateNameOptions = function(floorSelectElem, preSelectedName = '') {
+            const floor = floorSelectElem.value, nameSelect = floorSelectElem.parentElement.querySelector('.point-name-select');
+            if (!floor) { nameSelect.innerHTML = '<option value="">-- 先選樓層 --</option>'; return; }
+            let nameOpts = '<option value="">-- 選地點 --</option>';
+            dbPoints.filter(p => p.floor === floor).forEach(p => { nameOpts += `<option value="${p.name}" ${p.name === preSelectedName ? 'selected' : ''}>${p.name}</option>`; });
+            nameSelect.innerHTML = nameOpts;
+        };
+
+        window.handleOrderChange = function(inputElement) {
+            const newOrder = parseInt(inputElement.value);
+            if (isNaN(newOrder) || newOrder < 1) { inputElement.value = 1; return; }
+            const allInputs = Array.from(document.querySelectorAll('.point-order'));
+            if (allInputs.some(inp => inp !== inputElement && parseInt(inp.value) === newOrder)) {
+                if (confirm(`已有設定為第 ${newOrder} 個點的地點。\n是否將此地點設為第 ${newOrder} 點，並將後續順延？`)) {
+                    allInputs.forEach(inp => { if (inp !== inputElement && parseInt(inp.value) >= newOrder) inp.value = parseInt(inp.value) + 1; });
+                    window.reorderUI();
+                }
+            } else { window.reorderUI(); }
+        };
+
+        window.reorderUI = function() {
+            const container = document.getElementById('pointsInputContainer'), rows = Array.from(container.children);
+            rows.sort((a, b) => (parseInt(a.querySelector('.point-order').value) || 999) - (parseInt(b.querySelector('.point-order').value) || 999));
+            rows.forEach(row => container.appendChild(row));
+        };
+
+        window.saveRoute = async function() {
+            const name = document.getElementById('routeModalName').value.trim(), editIdx = document.getElementById('editRouteId').value;
+            const routeOrder = parseInt(document.getElementById('routeModalOrder').value) || 999, isActive = document.getElementById('routeModalActive').checked;
+            const globalInterval = parseInt(document.getElementById('routeModalGlobalInterval').value) || 0;
+            
+            let pointsData = [];
+            document.querySelectorAll('.point-input-row').forEach(row => {
+                const order = parseInt(row.querySelector('.point-order').value) || 999;
+                const floor = row.querySelector('.point-floor-select').value, ptName = row.querySelector('.point-name-select').value;
+                const interval = parseInt(row.querySelector('.point-interval').value) || 0;
+                if (floor && ptName) pointsData.push({ order: order, name: `${floor} ${ptName}`, interval: interval });
+            });
+
+            if (!name) { alert("請輸入路線名稱！"); return; }
+            if (pointsData.length === 0) { alert("至少需選擇一個巡邏點！"); return; }
+            if (new Set(pointsData.map(p => p.order)).size !== pointsData.length) { alert("⚠️ 儲存失敗：發現相同的次序數字！"); return; }
+
+            pointsData.sort((a, b) => a.order - b.order);
+            const finalPointsArray = pointsData.map(p => p.name);
+            const finalIntervalsArray = pointsData.map(p => p.interval);
+            
+            const payload = {
+                name: name, points: finalPointsArray, pointIntervals: finalIntervalsArray, 
+                routeOrder: routeOrder, globalInterval: globalInterval, isActive: isActive
+            };
+
+            try {
+                if (editIdx !== "") { await updateDoc(doc(db, "routes", editIdx), payload); } 
+                else { await addDoc(collection(db, "routes"), payload); }
+                window.closeModal('routeModal'); 
+                alert("路線設定已儲存至雲端！");
+            } catch(e) { alert("儲存失敗"); }
+        };
+
+        window.editRoute = function(id) { window.openRouteModal(id); };
+        window.deleteRoute = async function(id) {
+            if (confirm("確定要刪除這條路線嗎？")) await deleteDoc(doc(db, "routes", id));
+        };
+
+        // --- 人員管理 ---
+        window.loadUsersData = function() {
+            const tbody = document.getElementById('usersTableBody'); tbody.innerHTML = '';
+            for (let username in dbUsers) {
+                const u = dbUsers[username];
+                let roleBadge = '';
+                if (u.role === 'admin') roleBadge = '<span class="badge badge-danger">最高管理員</span>';
+                else if (u.role === 'sub_admin') roleBadge = '<span class="badge badge-warning">二級管理員</span>';
+                else roleBadge = '<span class="badge badge-info">一般巡邏員</span>';
+
+                const canSeePassword = (currentUser.role === 'admin' || username === currentUser.username);
+                const displayPassword = canSeePassword ? u.password : '<span style="color:#aaa;">******</span>';
+
+                let actionBtns = '';
+                if (currentUser.role === 'admin') {
+                    actionBtns = `<button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.openUserModal('${username}')">✏️ 編輯</button>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteUser('${username}')">🗑️ 刪除</button>`;
+                } else if (currentUser.role === 'sub_admin') {
+                    if (username === currentUser.username) actionBtns = `<span style="font-size:12px; color:#888;">(請利用右上方修改密碼)</span>`;
+                    else actionBtns = `<span style="font-size:12px; color:#aaa;">無權修改</span>`;
+                }
+
+                tbody.innerHTML += `<tr>
+                    <td><code>${username}</code></td><td><strong>${u.name}</strong></td><td>${displayPassword}</td>
+                    <td>${roleBadge}</td><td>${actionBtns}</td>
+                </tr>`;
+            }
+        };
+
+        window.openUserModal = function(username = null) {
+            if (username) {
+                if (currentUser.role !== 'admin' && username !== currentUser.username) { alert("無權編輯其他人員資料！"); return; }
+                document.getElementById('userModalTitle').innerText = "編輯人員帳號";
+                document.getElementById('editOriginalUsername').value = username;
+                document.getElementById('userModalUsername').value = username; document.getElementById('userModalUsername').readOnly = true; 
+                document.getElementById('userModalName').value = dbUsers[username].name;
+                document.getElementById('userModalPassword').value = dbUsers[username].password;
+                document.getElementById('userModalRole').value = dbUsers[username].role || 'user';
+            } else {
+                document.getElementById('userModalTitle').innerText = "新增巡邏人員帳號"; document.getElementById('editOriginalUsername').value = "";
+                document.getElementById('userModalUsername').value = ""; document.getElementById('userModalUsername').readOnly = false;
+                document.getElementById('userModalName').value = ""; document.getElementById('userModalPassword').value = "";
+                document.getElementById('userModalRole').value = "user";
+            }
+            document.getElementById('userModal').classList.add('active');
+        };
+
+        window.saveUser = async function() {
+            const origUn = document.getElementById('editOriginalUsername').value;
+            const un = document.getElementById('userModalUsername').value.trim();
+            const name = document.getElementById('userModalName').value.trim();
+            const pw = document.getElementById('userModalPassword').value.trim();
+            const role = document.getElementById('userModalRole').value;
+            if (!un || !name || !pw) { alert("請填寫所有欄位！"); return; }
+            
+            try {
+                if (origUn) {
+                    if (currentUser.role !== 'admin' && origUn !== currentUser.username) { alert("無權限！"); return; }
+                    await setDoc(doc(db, "users", origUn), { password: pw, role: role, name: name });
+                } else {
+                    if (dbUsers[un]) { alert("此帳號名稱已存在！"); return; }
+                    await setDoc(doc(db, "users", un), { password: pw, role: role, name: name });
+                }
+                window.closeModal('userModal'); alert(`人員資料已同步至雲端！`);
+            } catch(e) { alert("儲存失敗"); }
+        };
+
+        window.deleteUser = async function(username) {
+            if (currentUser.role !== 'admin') { alert("只有最高管理員能刪除！"); return; }
+            if (username === 'admin' || username === currentUser.username) { alert("不可刪除預設帳號或自己！"); return; }
+            if (confirm(`確定刪除帳號 ${username} 嗎？`)) await deleteDoc(doc(db, "users", username));
+        };
+
+        window.openSelfPasswordModal = function() {
+            document.getElementById('selfOldPassword').value = ''; document.getElementById('selfNewPassword').value = '';
+            document.getElementById('selfConfirmPassword').value = ''; document.getElementById('selfPasswordModal').classList.add('active');
+        };
+
+        window.saveSelfPassword = async function() {
+            const oldPw = document.getElementById('selfOldPassword').value.trim(), newPw = document.getElementById('selfNewPassword').value.trim();
+            const confPw = document.getElementById('selfConfirmPassword').value.trim();
+            if (!oldPw || !newPw || !confPw) { alert("請填寫所有密碼欄位！"); return; }
+            if (newPw !== confPw) { alert("新密碼不相符！"); return; }
+            
+            const un = currentUser.username;
+            if (dbUsers[un].password !== oldPw) { alert("舊密碼錯誤！"); return; }
+            
+            try {
+                await updateDoc(doc(db, "users", un), { password: newPw });
+                window.closeModal('selfPasswordModal');
+                alert("密碼修改成功！請重新登入。");
+                window.performLogout(); 
+            } catch(e) { alert("更新失敗"); }
+        };
+// ... (上面是你原本其他的程式碼，例如 window.saveSelfPassword 等等) ...
+
+        // 👇 請把第 4 步的程式碼貼在這裡 👇
+        window.currentDispatchData = null;
+
+        window.openDispatchModal = function(taskId, incidentIndex) {
+            const task = dbTasks.find(t => t.id === taskId);
+            const inc = task.incidents[incidentIndex];
+            
+            // 把資料暫存起來
+            window.currentDispatchData = {
+                location: inc.pointName,
+                photo: inc.photo || "",
+                reporter: task.guardName,
+                reportTime: inc.timeStr
+            };
+
+            // 把資料填入彈窗
+            document.getElementById('dispatchLocation').innerText = inc.pointName;
+            document.getElementById('dispatchText').value = inc.text || ""; 
+            
+            document.getElementById('dispatchModal').classList.add('active');
+        };
+        
+        window.submitWorkOrder = async function() {
+            const dept = document.getElementById('dispatchDept').value;
+            const descText = document.getElementById('dispatchText').value.trim();
+            
+            if (!descText && !window.currentDispatchData.photo) {
+                alert("請輸入工單說明或提供照片！"); return;
+            }
+        
+            const prefix = dept === '工程部' ? 'ENG' : 'CLN';
+            // 取得今天的日期字串 (例如: 20231025)
+            const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+        
+            try {
+                // 🚨 核心修改：查詢該「特定部門」目前在資料庫中總共有幾張單
+                const q = query(collection(db, "workOrders"), where("department", "==", dept));
+                const querySnapshot = await getDocs(q);
+                
+                // 產生獨立的流水號 (現有單數 + 1)，並補零到三位數
+                const nextSequence = querySnapshot.size + 1; 
+                const refNumber = `${prefix}-${dateStr}-${String(nextSequence).padStart(3, '0')}`;
+        
+                // 準備上傳的資料
+                const orderData = {
+                    refNumber: refNumber, // 寫入獨立的流水編號
+                    department: dept,
+                    location: window.currentDispatchData.location,
+                    description: descText,
+                    photo: window.currentDispatchData.photo,
+                    reporter: window.currentDispatchData.reporter,
+                    reportTime: window.currentDispatchData.reportTime,
+                    dispatchTime: new Date().toLocaleString(),
+                    status: "待處理"
+                };
+        
+                // 寫入雲端資料庫
+                await addDoc(collection(db, "workOrders"), orderData);
+                
+                alert(`✅ 成功派發！\n獨立工單編號：${refNumber}`);
+                document.getElementById('dispatchModal').classList.remove('active');
+                
+            } catch (e) {
+                console.error("派單失敗", e);
+                alert("派單失敗，請檢查網路連線。");
+            }
+        };
+
+    </script>
+</body>
+</html>
