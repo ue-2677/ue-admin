@@ -420,41 +420,38 @@
         // ==========================================
         
         window.checkAuth = function() {
-            const loggedInUserStr = sessionStorage.getItem('loggedInAdminUser');
-            if (!loggedInUserStr) {
-                document.getElementById('loginScreen').style.display = 'flex';
-                document.getElementById('sidebarContainer').style.display = 'none';
-                document.getElementById('mainContentContainer').style.display = 'none';
-            } else {
-                currentUser = JSON.parse(loggedInUserStr);
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('sidebarContainer').style.display = 'flex';
-                document.getElementById('mainContentContainer').style.display = 'flex';
-                
-                let roleName = (currentUser.role === 'admin') ? '最高管理員' : (currentUser.role === 'sub_admin' ? '二級管理員' : '一般巡邏員');
-                document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (${roleName})`;
-                window.loadDashboardData();
+            // 改為讀取共通的 localStorage
+            const userStr = localStorage.getItem('cloudCurrentUser');
+            if (!userStr) { 
+                // 沒登入就直接踢回首頁
+                window.location.replace('index.html'); 
+                return; 
             }
-        };
-
-        window.performLogin = function() {
-            const un = document.getElementById('loginUsername').value.trim();
-            const pw = document.getElementById('loginPassword').value.trim();
-            if (!un || !pw) { alert("請輸入帳號與密碼！"); return; }
-            if (dbUsers[un] && dbUsers[un].password === pw) {
-                const role = dbUsers[un].role || 'user';
-                if (role !== 'admin' && role !== 'sub_admin') {
-                    alert("權限不足，一般巡邏員僅能登入手機前台 APP！"); return;
-                }
-                sessionStorage.setItem('loggedInAdminUser', JSON.stringify({ username: un, name: dbUsers[un].name, role: role }));
-                window.checkAuth();
-            } else { alert("帳號或密碼錯誤！"); }
+            
+            currentUser = JSON.parse(userStr);
+            if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin') {
+                alert("權限不足，將返回登入頁！");
+                window.location.replace('index.html'); 
+                return;
+            }
+            
+            // 隱藏登入區塊，顯示後台畫面
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('sidebarContainer').style.display = 'flex';
+            document.getElementById('mainContentContainer').style.display = 'flex';
+            
+            let roleName = (currentUser.role === 'admin') ? '最高管理員' : '二級管理員';
+            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (${roleName})`;
+            window.loadDashboardData();
         };
 
         window.performLogout = function() {
-            sessionStorage.removeItem('loggedInAdminUser'); currentUser = null;
-            document.getElementById('loginUsername').value = ''; document.getElementById('loginPassword').value = '';
-            window.checkAuth();
+            if(confirm("確定要登出系統嗎？")) { 
+                // 清除共通通行證並踢回首頁
+                localStorage.removeItem('cloudCurrentUser'); 
+                currentUser = null;
+                window.location.replace('index.html'); 
+            }
         };
 
         window.refreshCurrentView = function() {
