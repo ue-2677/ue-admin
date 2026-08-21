@@ -1,0 +1,26 @@
+window.processLogin = function() {
+    const un = document.getElementById('inputUsername').value.trim();
+    const pw = document.getElementById('inputPassword').value.trim();
+    
+    if (dbUsers[un] && dbUsers[un].password === pw) {
+        currentUser = { username: un, role: dbUsers[un].role, name: dbUsers[un].name };
+        localStorage.setItem('cloudCurrentUser', JSON.stringify(currentUser));
+        
+        // 🚨 核心分流邏輯 (Routing)
+        const role = currentUser.role;
+        if (role === 'admin' || role === 'sub_admin') {
+            window.location.href = 'admin_dashboard.html'; // 跳轉主後台
+        } else if (role === 'engineering') {
+            window.location.href = 'engineering.html';     // 跳轉工程部
+        } else if (role === 'cleaning') {
+            window.location.href = 'cleaning.html';        // 跳轉清潔部
+        } else {
+            // 一般保全 (user) 留在 index.html，直接切換到巡邏主選單
+            document.getElementById('inputUsername').value = ''; 
+            document.getElementById('inputPassword').value = '';
+            window.checkLoginState();
+        }
+    } else { 
+        alert("❌ 帳號或密碼錯誤！"); 
+    }
+};
