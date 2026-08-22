@@ -217,8 +217,12 @@
     <!-- 👆 圖片預覽視窗結束 👆 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc } 
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc, getDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        
+        // 🚨 載入 Firebase Auth 引擎模組
+        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         // 🌟 1. 貼上你共用的 Firebase Config
         const firebaseConfig = {
@@ -232,60 +236,72 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app); // 啟動 Auth 引擎
+        const VIRTUAL_DOMAIN = "@patrol.com"; // 虛擬信箱網域
 
         let currentUser = null;
         let dbUsers = {};
         let dbWorkOrders = [];
         let currentCompleteOrderId = null;
         let currentCompletePhotoBase64 = "";
+
         // ==========================================
         // 🛡️ 資安防護：XSS HTML 字元過濾函數
         // ==========================================
         window.escapeHTML = function(str) {
             if (str === null || str === undefined) return '';
-            // 將字串中的危險符號替換成安全的 HTML 實體編碼
             return String(str).replace(/[&<>'"]/g, function(tag) {
-                const charsToReplace = {
-                    '&': '&amp;', '<': '&lt;', '>': '&gt;',
-                    "'": '&#39;', '"': '&quot;'
-                };
+                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
                 return charsToReplace[tag] || tag;
             });
         };
 
-        // 時間顯示
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
-        // --- 權限驗證邏輯 ---
-        window.checkAuth = function() {
-            const userStr = localStorage.getItem('cloudCurrentUser');
-            if (!userStr) { window.location.href = 'index.html'; return; }
-            
-            currentUser = JSON.parse(userStr);
-            if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'cleaning') {
-                alert("權限不足，將返回登入頁！");
-                window.location.href = 'index.html'; return;
+        // ==========================================
+        // 🔐 登入驗證與監聽 (Auth 核心)
+        // ==========================================
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const username = user.email.replace(VIRTUAL_DOMAIN, '');
+                const userDoc = await getDoc(doc(db, "users", username));
+                
+                if (userDoc.exists()) {
+                    currentUser = { username: username, ...userDoc.data() };
+                    
+                    // 防呆檢查：只有這三種身分可以進清潔部後台
+                    if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'cleaning') {
+                        alert("權限不足，將返回登入頁！");
+                        auth.signOut();
+                        window.location.replace('index.html');
+                        return;
+                    }
+                    
+                    document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
+                    initRealtimeListeners();
+                } else {
+                    auth.signOut();
+                    window.location.replace('index.html');
+                }
+            } else {
+                window.location.replace('index.html');
             }
-            
-            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
-            initRealtimeListeners();
-        };
+        });
 
-        window.performLogout = function() {
+        window.performLogout = async function() {
             if(confirm("確定要登出系統嗎？")) { 
-                localStorage.removeItem('cloudCurrentUser'); 
-                window.location.href = 'index.html'; 
+                await auth.signOut();
+                localStorage.removeItem('cloudCurrentUser'); // 清除舊版殘留
+                window.location.replace('index.html'); 
             }
         };
 
         // --- Firebase 即時監聽 ---
         function initRealtimeListeners() {
-            // 監聽用戶 (為了改密碼)
             onSnapshot(collection(db, "users"), (snapshot) => {
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
             });
 
-            // 監聽部門工單
             const q = query(collection(db, "workOrders"), where("department", "==", "清潔部"));
             onSnapshot(q, (snapshot) => {
                 dbWorkOrders = [];
@@ -295,10 +311,7 @@
         }
 
        // --- 篩選器觸發功能 ---
-        window.applyFilters = function() {
-            window.renderWorkOrders(); // 只要條件改變，就重新渲染表格
-        };
-
+        window.applyFilters = function() { window.renderWorkOrders(); };
         window.clearFilters = function() {
             document.getElementById('filterKeyword').value = '';
             document.getElementById('filterStartDate').value = '';
@@ -307,55 +320,40 @@
             window.renderWorkOrders();
         };
 
-        // --- 升級版：支援篩選的渲染表格功能 ---
         window.renderWorkOrders = function() {
             const tbody = document.getElementById('workOrderTableBody');
             tbody.innerHTML = '';
             
-            // 1. 取得畫面上所有的篩選條件
             const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
-            const startDateRaw = document.getElementById('filterStartDate').value; // 格式: YYYY-MM-DD
-            const endDateRaw = document.getElementById('filterEndDate').value;     // 格式: YYYY-MM-DD
+            const startDateRaw = document.getElementById('filterStartDate').value; 
+            const endDateRaw = document.getElementById('filterEndDate').value;     
             const statusFilter = document.getElementById('filterStatus').value;
 
-            // 將日期轉為 YYYYMMDD 的純數字字串，方便與我們的工單編號比對！
             const startDate = startDateRaw ? startDateRaw.replace(/-/g, '') : '00000000';
             const endDate = endDateRaw ? endDateRaw.replace(/-/g, '') : '99999999';
 
-            // 2. 進行陣列過濾 (只保留符合條件的工單)
             let filteredOrders = dbWorkOrders.filter(order => {
-                // (A) 狀態過濾
                 if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-
-                // (B) 關鍵字過濾 (比對編號、地點、狀況說明、完工備註)
                 if (keyword) {
                     const searchStr = `${order.refNumber} ${order.location} ${order.description || ''} ${order.completeRemark || ''}`.toLowerCase();
                     if (!searchStr.includes(keyword)) return false;
                 }
-
-                // (C) 日期範圍過濾 (利用單號中間的日期 YYYYMMDD 來比對，例如 ENG-20231025-A1B2)
                 const dateMatch = order.refNumber.match(/-(\d{8})-/);
                 if (dateMatch) {
                     const orderDate = dateMatch[1];
-                    // 如果工單日期早於開始日期，或晚於結束日期，就剔除
                     if (orderDate < startDate || orderDate > endDate) return false;
                 }
-
-                return true; // 通過所有考驗，保留這筆資料
+                return true; 
             });
 
-            // 3. 排序 (日期與編號最新的在最上面)
             filteredOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
 
-            // 4. 判斷是否有資料
             if (filteredOrders.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 30px;">找不到符合條件的工單。</td></tr>';
                 return;
             }
 
-            // 5. 渲染過濾後的資料到畫面上
             filteredOrders.forEach(order => {
-                // 🛡️ 實施 XSS 過濾：把所有使用者輸入的欄位套上 escapeHTML
                 const safeRefNumber = window.escapeHTML(order.refNumber);
                 const safeReporter = window.escapeHTML(order.reporter || '保全');
                 const safeLocation = window.escapeHTML(order.location);
@@ -373,7 +371,6 @@
                        </div>` 
                     : '';
 
-                // 這裡改用過濾後的 safeRemark
                 const completeInfoHtml = order.status === '已完成' && (order.completeRemark || order.completePhoto)
                     ? `<div style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-left: 3px solid #28a745; font-size: 13px; border-radius: 4px;">
                         <strong>✅ 完工回報：</strong>${safeRemark}<br>
@@ -393,7 +390,6 @@
                 }
                 actionBtns += `<button class="btn btn-danger" onclick="window.deleteWorkOrder('${order.id}')">🗑️ 刪除</button>`;
 
-                // 這裡全部改用 safe 開頭的安全變數
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${safeRefNumber}</strong><br><span style="font-size:11px; color:#888;">通報人: ${safeReporter}</span></td>
@@ -409,6 +405,8 @@
                     </tr>
                 `;
             });
+        };
+
         // --- 完工與修改報告邏輯 ---
         window.openCompleteModal = function(orderId) {
             currentCompleteOrderId = orderId;
@@ -514,7 +512,9 @@
             }
         };
 
-        // --- 修改個人密碼 ---
+        // ==========================================
+        // 🔐 升級版：修改個人密碼 (Auth API)
+        // ==========================================
         window.openSelfPasswordModal = function() {
             document.getElementById('selfOldPassword').value = ''; 
             document.getElementById('selfNewPassword').value = '';
@@ -529,17 +529,27 @@
             
             if (!oldPw || !newPw || !confPw) { alert("請填寫所有密碼欄位！"); return; }
             if (newPw !== confPw) { alert("新密碼不相符！"); return; }
-            
-            const un = currentUser.username;
-            if (dbUsers[un].password !== oldPw) { alert("舊密碼錯誤！"); return; }
+            if (newPw.length < 6) { alert("新密碼至少需要 6 個字元！"); return; }
             
             try {
-                await updateDoc(doc(db, "users", un), { password: newPw });
+                // 必須先拿舊密碼向伺服器證明「是我本人」
+                const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPw);
+                await reauthenticateWithCredential(auth.currentUser, credential);
+                
+                // 驗證成功後，更新為新密碼
+                await updatePassword(auth.currentUser, newPw);
+                
                 document.getElementById('selfPasswordModal').style.display = 'none';
-                alert("密碼修改成功！請重新登入。");
-                window.performLogout(); 
-            } catch(e) { alert("更新失敗"); }
+                alert("✅ 密碼修改成功！基於安全機制，請使用新密碼重新登入。");
+                await auth.signOut();
+                window.location.replace('index.html'); 
+            } catch(e) { 
+                console.error(e);
+                if (e.code === 'auth/invalid-credential') alert("❌ 舊密碼輸入錯誤！");
+                else alert("❌ 更新失敗：" + e.message); 
+            }
         };
+
         // --- 圖片放大預覽功能 ---
         window.openImageModal = function(base64Src) {
             if (!base64Src) return;
@@ -551,8 +561,6 @@
             document.getElementById('imageViewerModal').style.display = 'none';
             document.getElementById('enlargedImage').src = ''; // 清空記憶體
         };
-        // 啟動驗證
-        window.onload = window.checkAuth;
     </script>
 </body>
 </html>
