@@ -393,7 +393,20 @@
         let dbTasks = [];
         let currentUser = null;
         let adminScannedUid = "";
-
+        // ==========================================
+        // 🛡️ 資安防護：XSS HTML 字元過濾函數
+        // ==========================================
+        window.escapeHTML = function(str) {
+            if (str === null || str === undefined) return '';
+            // 將字串中的危險符號替換成安全的 HTML 實體編碼
+            return String(str).replace(/[&<>'"]/g, function(tag) {
+                const charsToReplace = {
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                    "'": '&#39;', '"': '&quot;'
+                };
+                return charsToReplace[tag] || tag;
+            });
+        };
         // 🌟 啟動雲端即時監聽
         function initRealtimeListeners() {
             onSnapshot(collection(db, "users"), (snapshot) => {
