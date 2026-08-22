@@ -865,41 +865,54 @@
         };
 
         // ==========================================
-        // 👥 升級版：帳號管理 (雙引擎技術 + 加密保護)
+        // 👥 升級版：帳號管理 (雙引擎技術 + 防呆保護)
         // ==========================================
         window.loadUsersData = function() {
-            const tbody = document.getElementById('usersTableBody'); tbody.innerHTML = '';
-            for (let username in dbUsers) {
-                const u = dbUsers[username];
+            try {
+                const tbody = document.getElementById('usersTableBody'); 
+                if (!tbody) return;
+                tbody.innerHTML = '';
                 
-                let roleBadge = '';
-                if (u.role === 'admin') roleBadge = '<span class="badge badge-danger">最高管理員</span>';
-                else if (u.role === 'sub_admin') roleBadge = '<span class="badge badge-warning">二級管理員</span>';
-                else if (u.role === 'engineering') roleBadge = '<span class="badge" style="background-color: #007bff; color: white;">工程部人員</span>';
-                else if (u.role === 'cleaning') roleBadge = '<span class="badge" style="background-color: #17a2b8; color: white;">清潔部人員</span>';
-                else roleBadge = '<span class="badge badge-info">一般巡邏員</span>';
+                let userCount = 0;
+                for (let username in dbUsers) {
+                    userCount++;
+                    const u = dbUsers[username];
+                    
+                    let roleBadge = '';
+                    if (u.role === 'admin') roleBadge = '<span class="badge badge-danger">最高管理員</span>';
+                    else if (u.role === 'sub_admin') roleBadge = '<span class="badge badge-warning">二級管理員</span>';
+                    else if (u.role === 'engineering') roleBadge = '<span class="badge" style="background-color: #007bff; color: white;">工程部人員</span>';
+                    else if (u.role === 'cleaning') roleBadge = '<span class="badge" style="background-color: #17a2b8; color: white;">清潔部人員</span>';
+                    else roleBadge = '<span class="badge badge-info">一般巡邏員</span>';
 
-                // 🔐 畫面上不再顯示明文密碼
-                const displayPassword = '<span style="color:#28a745; font-size:13px; font-weight:bold;">🔒 已加密</span>';
+                    // 🔐 畫面上不再顯示明文密碼
+                    const displayPassword = '<span style="color:#28a745; font-size:13px; font-weight:bold;">🔒 已加密</span>';
 
-                let actionBtns = '';
-                if (currentUser.role === 'admin') {
-                    actionBtns = `<button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.openUserModal('${username}')">✏️ 編輯</button>
-                        <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteUser('${username}')">🗑️ 停權/刪除</button>`;
-                } else if (currentUser.role === 'sub_admin') {
-                    if (username === currentUser.username) actionBtns = `<span style="font-size:12px; color:#888;">(請利用右上角改密碼)</span>`;
-                    else actionBtns = `<span style="font-size:12px; color:#aaa;">無權修改</span>`;
+                    let actionBtns = '';
+                    // 🛡️ 防呆：確保 currentUser 存在才判斷
+                    if (currentUser && currentUser.role === 'admin') {
+                        actionBtns = `<button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.openUserModal('${username}')">✏️ 編輯</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteUser('${username}')">🗑️ 停權/刪除</button>`;
+                    } else if (currentUser && currentUser.role === 'sub_admin') {
+                        if (username === currentUser.username) actionBtns = `<span style="font-size:12px; color:#888;">(請利用右上角改密碼)</span>`;
+                        else actionBtns = `<span style="font-size:12px; color:#aaa;">無權修改</span>`;
+                    }
+
+                    tbody.innerHTML += `<tr>
+                        <td><code>${window.escapeHTML(username)}</code></td>
+                        <td><strong>${window.escapeHTML(u.name || '未設定姓名')}</strong></td>
+                        <td>${displayPassword}</td>
+                        <td>${roleBadge}</td><td>${actionBtns}</td>
+                    </tr>`;
                 }
-
-                tbody.innerHTML += `<tr>
-                    <td><code>${window.escapeHTML(username)}</code></td>
-                    <td><strong>${window.escapeHTML(u.name)}</strong></td>
-                    <td>${displayPassword}</td>
-                    <td>${roleBadge}</td><td>${actionBtns}</td>
-                </tr>`;
+                
+                if (userCount === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">目前尚無人員資料，或載入中...</td></tr>';
+                }
+            } catch (err) {
+                console.error("載入人員列表發生錯誤:", err);
             }
         };
-
         window.openUserModal = function(username = null) {
             if (username) {
                 if (currentUser.role !== 'admin' && username !== currentUser.username) { alert("無權編輯其他人員資料！"); return; }
@@ -1018,19 +1031,40 @@
         };
 
         // --- 點位與路線管理 (保留原本邏輯) ---
-        // (此處省略部分不會影響資安的排版代碼，因為已經全數包含在上方結構中)
-        // 您只要直接替換掉原本的 <script type="module"> 即可。
 
-        window.loadPointsData = function() { /* 原本邏輯 */ 
-            const tbody = document.getElementById('pointsTableBody'); tbody.innerHTML = '';
-            dbPoints.forEach((pt) => {
-                const fullPtName = `${pt.floor} ${pt.name}`;
-                let boundUids = Object.keys(dbUidMappings).filter(k => dbUidMappings[k] === fullPtName);
-                let uidDisplay = boundUids.length > 0 ? `<code style="color: var(--primary);">${boundUids.join(', ')}</code>` : '<span style="color:#999;">尚未綁定</span>';
-                tbody.innerHTML += `<tr><td><strong>${window.escapeHTML(pt.floor)}</strong></td><td>${window.escapeHTML(pt.name)}</td><td>${uidDisplay}</td>
-                    <td><button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editPoint('${pt.id}')">✏️ 編輯</button>
-                    <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deletePoint('${pt.id}')">🗑️ 刪除</button></td></tr>`;
-            });
+        // ==========================================
+        // 🗺️ 升級版：點位與路線管理 (加上陣列防呆)
+        // ==========================================
+        window.loadPointsData = function() { 
+            try {
+                const tbody = document.getElementById('pointsTableBody'); 
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                
+                if (!dbPoints || dbPoints.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">目前尚無點位資料。</td></tr>';
+                    return;
+                }
+
+                dbPoints.forEach((pt) => {
+                    // 🛡️ 防呆：避免舊資料沒有 floor 或 name
+                    const fullPtName = `${pt.floor || ''} ${pt.name || ''}`.trim();
+                    let boundUids = Object.keys(dbUidMappings || {}).filter(k => dbUidMappings[k] === fullPtName);
+                    let uidDisplay = boundUids.length > 0 ? `<code style="color: var(--primary);">${boundUids.join(', ')}</code>` : '<span style="color:#999;">尚未綁定</span>';
+                    
+                    tbody.innerHTML += `<tr>
+                        <td><strong>${window.escapeHTML(pt.floor || '無')}</strong></td>
+                        <td>${window.escapeHTML(pt.name || '無')}</td>
+                        <td>${uidDisplay}</td>
+                        <td>
+                            <button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editPoint('${pt.id}')">✏️ 編輯</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deletePoint('${pt.id}')">🗑️ 刪除</button>
+                        </td>
+                    </tr>`;
+                });
+            } catch(err) {
+                console.error("載入點位發生錯誤:", err);
+            }
         };
         window.openPointModal = function(ptId = null) { /* 原本邏輯 */ 
             const uniqueFloors = [...new Set(dbPoints.map(p => p.floor))];
@@ -1126,25 +1160,49 @@
             reader.readAsText(file);
         };
         window.loadRoutesData = function() { /* 原本邏輯 */ 
-            const tbody = document.getElementById('routesTableBody'); tbody.innerHTML = '';
-            let routes = [...dbRoutes]; routes.sort((a, b) => (a.routeOrder || 999) - (b.routeOrder || 999));
-            routes.forEach((route) => {
-                const globalInt = route.globalInterval || 0;
-                const formattedPoints = route.points.map((pt, i) => {
-                    let interval = (route.pointIntervals && route.pointIntervals[i]) ? route.pointIntervals[i] : 0;
-                    let effectiveInterval = interval > 0 ? interval : globalInt;
-                    let intervalTag = effectiveInterval > 0 ? ` <span style="color:var(--danger); font-size:11px;">(${effectiveInterval}分)</span>` : '';
-                    return `<span style="display:inline-block; margin-bottom:4px;"><b>${i + 1}.</b> ${window.escapeHTML(pt)}${intervalTag}</span>`;
-                }).join(' ➔ ');
-                const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
-                tbody.innerHTML += `<tr>
-                    <td><b style="font-size:16px;">${route.routeOrder || '-'}</b></td>
-                    <td><strong>${window.escapeHTML(route.name)}</strong></td><td>${statusBadge}</td><td>${route.points.length} 點</td>
-                    <td style="font-size:13px; color:#555;">${formattedPoints}</td>
-                    <td><button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editRoute('${route.id}')">✏️ 編輯</button>
-                        <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteRoute('${route.id}')">🗑️ 刪除</button></td>
-                </tr>`;
-            });
+            try {
+                const tbody = document.getElementById('routesTableBody'); 
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                
+                if (!dbRoutes || dbRoutes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前尚無路線資料。</td></tr>';
+                    return;
+                }
+
+                let routes = [...dbRoutes]; 
+                routes.sort((a, b) => (a.routeOrder || 999) - (b.routeOrder || 999));
+                
+                routes.forEach((route) => {
+                    const globalInt = route.globalInterval || 0;
+                    
+                    // 🛡️ 關鍵防呆：如果這條路線的 points 壞掉或不存在，就塞給他一個空陣列，防止程式崩潰
+                    const safePoints = route.points || []; 
+                    
+                    const formattedPoints = safePoints.map((pt, i) => {
+                        let interval = (route.pointIntervals && route.pointIntervals[i]) ? route.pointIntervals[i] : 0;
+                        let effectiveInterval = interval > 0 ? interval : globalInt;
+                        let intervalTag = effectiveInterval > 0 ? ` <span style="color:var(--danger); font-size:11px;">(${effectiveInterval}分)</span>` : '';
+                        return `<span style="display:inline-block; margin-bottom:4px;"><b>${i + 1}.</b> ${window.escapeHTML(pt)}${intervalTag}</span>`;
+                    }).join(' ➔ ');
+                    
+                    const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
+                    
+                    tbody.innerHTML += `<tr>
+                        <td><b style="font-size:16px;">${route.routeOrder || '-'}</b></td>
+                        <td><strong>${window.escapeHTML(route.name || '未命名路線')}</strong></td>
+                        <td>${statusBadge}</td>
+                        <td>${safePoints.length} 點</td>
+                        <td style="font-size:13px; color:#555;">${formattedPoints || '<span style="color:#aaa;">無點位</span>'}</td>
+                        <td>
+                            <button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editRoute('${route.id}')">✏️ 編輯</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteRoute('${route.id}')">🗑️ 刪除</button>
+                        </td>
+                    </tr>`;
+                });
+            } catch (err) {
+                console.error("載入路線列表發生錯誤:", err);
+            }
         };
         window.openRouteModal = function(routeId = null) { /* 原本邏輯 */ 
             const container = document.getElementById('pointsInputContainer'); container.innerHTML = '';
