@@ -149,7 +149,11 @@
                 <div id="tab-routes" class="tab-content active">
                     <div class="card">
                         <div class="card-header">
-                            現有巡邏路線 
+                            <!-- ➕ 新增搜尋框 -->
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                現有巡邏路線
+                                <input type="text" id="routeFilterKeyword" class="form-control" placeholder="🔍 搜尋路線名稱..." onkeyup="window.applyRouteFilter()" style="padding: 6px; width: 200px; margin-bottom: 0;">
+                            </div>
                             <div style="display: flex; gap: 8px;">
                                 <input type="file" id="importRouteFile" style="display:none;" accept=".json" onchange="window.handleImportRoutes(event)">
                                 <button class="btn btn-info" onclick="document.getElementById('importRouteFile').click()">📥 匯入路線</button>
@@ -160,7 +164,10 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="width: 5%;">排序</th><th style="width: 15%;">路線名稱</th><th style="width: 8%;">狀態</th>
+                                    <!-- 🔄 修改標題加入 onclick 排序功能 -->
+                                    <th style="width: 5%; cursor: pointer;" onclick="window.sortRoutes('order')">排序 <span id="sort-route-order">▲</span></th>
+                                    <th style="width: 15%; cursor: pointer;" onclick="window.sortRoutes('name')">路線名稱 <span id="sort-route-name"></span></th>
+                                    <th style="width: 8%;">狀態</th>
                                     <th style="width: 10%;">點位數</th><th style="width: 45%;">巡邏點列表 (含獨立限時)</th><th style="width: 17%;">操作</th>
                                 </tr>
                             </thead>
@@ -171,13 +178,25 @@
 
                 <div id="tab-points" class="tab-content">
                     <div class="card">
-                        <div class="card-header">基礎巡邏點位資料庫 <button class="btn btn-primary" onclick="window.openPointModal()">➕ 新增巡邏點</button></div>
+                        <div class="card-header">
+                            <!-- ➕ 新增搜尋框 -->
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                基礎巡邏點位資料庫
+                                <input type="text" id="pointFilterKeyword" class="form-control" placeholder="🔍 搜尋樓層或名稱..." onkeyup="window.applyPointFilter()" style="padding: 6px; width: 200px; margin-bottom: 0;">
+                            </div>
+                            <button class="btn btn-primary" onclick="window.openPointModal()">➕ 新增巡邏點</button>
+                        </div>
                         <div style="padding: 15px; background: #fff3cd; color: #856404; font-size: 13px; border-bottom: 1px solid #eee;">
                             💡 提示：請先在此處建立大樓所有的巡邏地點。建立後，即可在「巡邏路線管理」中組合路線。
                         </div>
                         <table>
                             <thead>
-                                <tr><th style="width: 25%;">樓層 / 區域</th><th style="width: 25%;">位置名稱</th><th style="width: 35%;">已綁定晶片 ID (UID)</th><th style="width: 15%;">操作</th></tr>
+                                <tr>
+                                    <!-- 🔄 修改標題加入 onclick 排序功能 -->
+                                    <th style="width: 25%; cursor: pointer;" onclick="window.sortPoints('floor')">樓層 / 區域 <span id="sort-point-floor"></span></th>
+                                    <th style="width: 25%; cursor: pointer;" onclick="window.sortPoints('name')">位置名稱 <span id="sort-point-name"></span></th>
+                                    <th style="width: 35%;">已綁定晶片 ID (UID)</th><th style="width: 15%;">操作</th>
+                                </tr>
                             </thead>
                             <tbody id="pointsTableBody"></tbody>
                         </table>
@@ -535,6 +554,33 @@
             document.getElementById('taskFilterStartDate').value = '';
             document.getElementById('taskFilterEndDate').value = '';
             window.loadDashboardData();
+        };
+
+        // ➕ 新增：點位與路線的排序狀態與控制函數
+        window.routeSortState = { col: 'order', desc: false };
+        window.pointSortState = { col: 'floor', desc: false };
+
+        window.applyRouteFilter = function() { window.loadRoutesData(); };
+        window.applyPointFilter = function() { window.loadPointsData(); };
+
+        window.sortRoutes = function(col) {
+            if (window.routeSortState.col === col) {
+                window.routeSortState.desc = !window.routeSortState.desc;
+            } else {
+                window.routeSortState.col = col;
+                window.routeSortState.desc = false;
+            }
+            window.loadRoutesData();
+        };
+
+        window.sortPoints = function(col) {
+            if (window.pointSortState.col === col) {
+                window.pointSortState.desc = !window.pointSortState.desc;
+            } else {
+                window.pointSortState.col = col;
+                window.pointSortState.desc = false;
+            }
+            window.loadPointsData();
         };
 
         window.loadDashboardData = function() {
@@ -990,18 +1036,41 @@
             }
         };
 
-        window.loadPointsData = function() { 
+        window.loadPointsData = function() {
             try {
                 const tbody = document.getElementById('pointsTableBody'); 
                 if (!tbody) return;
                 tbody.innerHTML = '';
                 
-                if (!dbPoints || dbPoints.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">目前尚無點位資料。</td></tr>';
+                // ➕ 加入搜尋過濾與排序邏輯
+                let keyword = document.getElementById('pointFilterKeyword') ? document.getElementById('pointFilterKeyword').value.toLowerCase().trim() : "";
+                let points = [...dbPoints];
+                
+                if (keyword) {
+                    points = points.filter(pt => 
+                        (pt.floor && pt.floor.toLowerCase().includes(keyword)) || 
+                        (pt.name && pt.name.toLowerCase().includes(keyword))
+                    );
+                }
+
+                points.sort((a, b) => {
+                    let valA = (a[window.pointSortState.col] || "").toLowerCase();
+                    let valB = (b[window.pointSortState.col] || "").toLowerCase();
+                    if (valA < valB) return window.pointSortState.desc ? 1 : -1;
+                    if (valA > valB) return window.pointSortState.desc ? -1 : 1;
+                    return 0;
+                });
+
+                // 更新標題箭頭顯示
+                if(document.getElementById('sort-point-floor')) document.getElementById('sort-point-floor').innerText = window.pointSortState.col === 'floor' ? (window.pointSortState.desc ? '▼' : '▲') : '';
+                if(document.getElementById('sort-point-name')) document.getElementById('sort-point-name').innerText = window.pointSortState.col === 'name' ? (window.pointSortState.desc ? '▼' : '▲') : '';
+
+                if (!points || points.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">目前尚無符合的點位資料。</td></tr>';
                     return;
                 }
 
-                dbPoints.forEach((pt) => {
+                points.forEach((pt) => {
                     const fullPtName = `${pt.floor || ''} ${pt.name || ''}`.trim();
                     let boundUids = Object.keys(dbUidMappings || {}).filter(k => dbUidMappings[k] === fullPtName);
                     let uidDisplay = boundUids.length > 0 ? `<code style="color: var(--primary);">${boundUids.join(', ')}</code>` : '<span style="color:#999;">尚未綁定</span>';
@@ -1117,13 +1186,36 @@
                 if (!tbody) return;
                 tbody.innerHTML = '';
                 
-                if (!dbRoutes || dbRoutes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前尚無路線資料。</td></tr>';
-                    return;
+                // ➕ 加入搜尋過濾與排序邏輯
+                let keyword = document.getElementById('routeFilterKeyword') ? document.getElementById('routeFilterKeyword').value.toLowerCase().trim() : "";
+                let routes = [...dbRoutes];
+
+                if (keyword) {
+                    routes = routes.filter(r => r.name && r.name.toLowerCase().includes(keyword));
                 }
 
-                let routes = [...dbRoutes]; 
-                routes.sort((a, b) => (a.routeOrder || 999) - (b.routeOrder || 999));
+                routes.sort((a, b) => {
+                    if (window.routeSortState.col === 'order') {
+                        let valA = a.routeOrder || 999;
+                        let valB = b.routeOrder || 999;
+                        return window.routeSortState.desc ? valB - valA : valA - valB;
+                    } else {
+                        let valA = (a.name || "").toLowerCase();
+                        let valB = (b.name || "").toLowerCase();
+                        if (valA < valB) return window.routeSortState.desc ? 1 : -1;
+                        if (valA > valB) return window.routeSortState.desc ? -1 : 1;
+                        return 0;
+                    }
+                });
+
+                // 更新標題箭頭顯示
+                if(document.getElementById('sort-route-order')) document.getElementById('sort-route-order').innerText = window.routeSortState.col === 'order' ? (window.routeSortState.desc ? '▼' : '▲') : '';
+                if(document.getElementById('sort-route-name')) document.getElementById('sort-route-name').innerText = window.routeSortState.col === 'name' ? (window.routeSortState.desc ? '▼' : '▲') : '';
+
+                if (!routes || routes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前尚無符合的路線資料。</td></tr>';
+                    return;
+                }
                 
                 routes.forEach((route) => {
                     const globalInt = route.globalInterval || 0;
