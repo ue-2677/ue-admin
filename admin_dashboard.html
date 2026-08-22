@@ -755,8 +755,8 @@
              onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" title="點擊放大">
     </div>` : ''}
                 
-                <!-- 新增這顆派發按鈕 -->
-                <button class="btn btn-info" style="width:100%; padding:8px;" onclick="window.openDispatchModal('${task.id}', ${index})">
+                <!-- 這顆派發按鈕 -->
+                <button class="btn btn-info pdf-hide-btn" style="width:100%; padding:8px; margin-top:5px;" onclick="window.openDispatchModal('${task.id}', ${index})">
                     📤 轉派給其他部門
                 </button>
             </div>`;
@@ -767,21 +767,31 @@
             document.getElementById('taskDetailModal').classList.add('active');
         };
 
-        // 修復：PDF 匯出時暫時移除捲軸，確保能完整匯出長表格
+        // 修復：PDF 匯出時暫時移除捲軸與操作按鈕，確保能完整匯出長表格
         window.exportTaskToPDF = function() {
             const exportArea = document.getElementById('taskExportArea');
             const tableContainer = document.getElementById('taskTableContainer');
             const rawTitle = document.getElementById('taskDetailTitle').innerText.replace(/[\/\\?%*:|"<>]/g, '-');
             
+            // 處理捲軸展開
             const originalMaxHeight = tableContainer ? tableContainer.style.maxHeight : '';
             const originalOverflowY = tableContainer ? tableContainer.style.overflowY : '';
             if (tableContainer) { tableContainer.style.maxHeight = 'none'; tableContainer.style.overflowY = 'visible'; }
 
+            // 👇 關鍵新增：找出所有標記為 pdf-hide-btn 的元素，將它們瞬間隱藏 👇
+            const buttonsToHide = exportArea.querySelectorAll('.pdf-hide-btn');
+            buttonsToHide.forEach(btn => btn.style.display = 'none');
+
+            // 開始產生 PDF
             html2pdf().set({
                 margin: 10, filename: `${rawTitle}_報表.pdf`, image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             }).from(exportArea).save().then(() => {
+                // PDF 產生完畢後，把樣式恢復原狀
                 if (tableContainer) { tableContainer.style.maxHeight = originalMaxHeight; tableContainer.style.overflowY = originalOverflowY; }
+                
+                // 👇 關鍵新增：把剛才隱藏的按鈕重新顯示出來 👇
+                buttonsToHide.forEach(btn => btn.style.display = 'block');
             });
         };
 
