@@ -33,6 +33,71 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        /* ========================================= */
+        /* 📱 手機版專屬樣式 (螢幕寬度小於 768px 時自動觸發) */
+        /* ========================================= */
+        @media (max-width: 768px) {
+            /* 1. 頂部導覽列改為垂直排列 */
+            .topbar { flex-direction: column; align-items: flex-start; padding: 15px; gap: 12px; }
+            .topbar h2 { font-size: 20px; }
+            .topbar div { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+            
+            /* 2. 內容區塊取消邊距，讓畫面最大化 */
+            .content-body { padding: 10px; }
+            .card { padding: 15px 10px; }
+            .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            
+            /* 3. 將表格 (Table) 徹底轉化為卡片 (Card) 佈局 */
+            table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
+            thead tr { display: none; } /* 隱藏電腦版表頭 */
+            
+            /* 卡片外觀 */
+            tr { 
+                margin-bottom: 15px; 
+                border: 1px solid #ddd; 
+                border-radius: 8px; 
+                padding: 10px; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+                background: white;
+            }
+            
+            /* 每一列資料的排版 */
+            td { 
+                border: none; 
+                border-bottom: 1px dashed #eee; 
+                position: relative; 
+                padding: 10px 0 10px 85px; /* 留出左側空間給標題 */
+                text-align: left; 
+                min-height: 24px;
+            }
+            td:last-child { border-bottom: none; padding: 15px 0 5px 0; text-align: center; }
+            
+            /* 4. 用 CSS 偽元素自動產生手機版的小標題 */
+            td::before {
+                position: absolute; 
+                top: 12px; 
+                left: 0; 
+                width: 75px;
+                font-weight: bold; 
+                color: var(--primary); 
+                font-size: 13px;
+            }
+            td:nth-of-type(1)::before { content: "編號 :"; }
+            td:nth-of-type(2)::before { content: "地點 :"; }
+            td:nth-of-type(3)::before { content: "說明 :"; }
+            td:nth-of-type(4)::before { content: "時間 :"; }
+            td:nth-of-type(5)::before { content: "狀態 :"; }
+            
+            /* 5. 把按鈕放大並變成滿版，方便手指點擊 */
+            .btn { 
+                width: 100%; 
+                margin-bottom: 8px; 
+                padding: 12px; 
+                font-size: 15px; 
+                box-sizing: border-box; 
+                display: block; 
+            }
+        }
     </style>
 </head>
 <body>
