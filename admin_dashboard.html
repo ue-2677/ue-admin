@@ -516,7 +516,17 @@
         };
 
         window.closeModal = function(modalId) { document.getElementById(modalId).classList.remove('active'); };
-
+        // 👇 補上漏掉的圖片放大功能 👇
+        window.openImageModal = function(base64Src) {
+            if (!base64Src) return;
+            document.getElementById('enlargedImage').src = base64Src;
+            document.getElementById('imageViewerModal').style.display = 'flex';
+        };
+        window.closeImageModal = function() {
+            document.getElementById('imageViewerModal').style.display = 'none';
+            document.getElementById('enlargedImage').src = ''; 
+        };
+        // 👆 補上漏掉的圖片放大功能 👆
         // --- 儀表板資料載入與整合邏輯修復 ---
 // --- 任務過濾觸發器 ---
         window.applyTaskFilters = function() { window.loadDashboardData(); };
@@ -738,7 +748,12 @@
                     <strong>📝 描述說明：</strong><br>
                     <span style="color:#333; line-height:1.5;">${inc.text || '<span style="color:#aaa;">無文字說明</span>'}</span>
                 </div>
-                ${inc.photo ? `<div style="text-align:center; margin-bottom:10px;"><img src="${inc.photo}" style="max-height:200px; border-radius:6px;"></div>` : ''}
+                ${inc.photo ? `
+    <div style="text-align:center; margin-bottom:10px;">
+        <img src="${inc.photo}" onclick="window.openImageModal('${inc.photo}')" 
+             style="max-height:200px; border-radius:6px; cursor:pointer; transition:0.2s; border:1px solid #ddd;" 
+             onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" title="點擊放大">
+    </div>` : ''}
                 
                 <!-- 新增這顆派發按鈕 -->
                 <button class="btn btn-info" style="width:100%; padding:8px;" onclick="window.openDispatchModal('${task.id}', ${index})">
