@@ -63,24 +63,29 @@
         
         <div class="form-group">
             <label>登入帳號</label>
-            <input type="text" id="inputUsername" class="form-control" placeholder="請輸入帳號" onkeypress="handleEnter(event)">
+            <!-- 提示使用者只需輸入短帳號 -->
+            <input type="text" id="inputUsername" class="form-control" placeholder="例如: admin, clean, engineering" onkeypress="handleEnter(event)">
         </div>
         <div class="form-group">
             <label>登入密碼</label>
             <input type="password" id="inputPassword" class="form-control" placeholder="請輸入密碼" onkeypress="handleEnter(event)">
         </div>
         
-        <button class="btn" onclick="window.processLogin()">登 入 系 統</button>
+        <button class="btn" onclick="window.processLogin()" id="loginBtn">登 入 系 統</button>
         
         <div id="statusMsg" class="loader">連線初始化中...</div>
     </div>
 
     <!-- ============================================== -->
-    <!-- Firebase SDK 與自動分流邏輯 -->
+    <!-- Firebase SDK 與企業級身分驗證邏輯 -->
     <!-- ============================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot } 
+        // 🚨 匯入 getAuth, signInWithEmailAndPassword, onAuthStateChanged (登入引擎三劍客)
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // 匯入 getFirestore (查詢權限用)
+        import { getFirestore, doc, getDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // 🌟 貼上共用的 Firebase Config
@@ -94,25 +99,29 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let dbUsers = {};
+        // 定義你們大樓的「虛擬信箱網域」
+        const VIRTUAL_DOMAIN = "@patrol.com";
 
-        // 監聽雲端帳號資料
-        onSnapshot(collection(db, "users"), (snapshot) => {
-            dbUsers = {}; 
-            snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
-            document.getElementById('statusMsg').innerText = "🟢 系統連線正常，請登入";
-        });
-
-        // 進入網頁時，檢查是否已經登入過了，如果登入過就自動跳轉
-        window.onload = function() {
-            const userStr = localStorage.getItem('cloudCurrentUser');
-            if (userStr) {
-                document.getElementById('statusMsg').innerText = "⏳ 偵測到已登入，正在為您跳轉...";
-                autoRedirect(JSON.parse(userStr).role);
+        // 監聽登入狀態 (如果已經有合法的 Token，就自動查身分並跳轉)
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                document.getElementById('statusMsg').innerText = "⏳ 驗證成功，正在讀取權限...";
+                // 從 Firestore 查出這個人真正的權限 (role)
+                const userDoc = await getDoc(doc(db, "users", user.email.replace(VIRTUAL_DOMAIN, '')));
+                if (userDoc.exists()) {
+                    const role = userDoc.data().role;
+                    autoRedirect(role);
+                } else {
+                    document.getElementById('statusMsg').innerText = "❌ 權限異常，請聯絡管理員";
+                    auth.signOut();
+                }
+            } else {
+                document.getElementById('statusMsg').innerText = "🟢 系統連線正常，請登入";
             }
-        };
+        });
 
         // 按 Enter 鍵直接登入
         window.handleEnter = function(e) {
@@ -120,36 +129,49 @@
         };
 
         // 驗證帳號密碼
-        window.processLogin = function() {
-            const un = document.getElementById('inputUsername').value.trim();
+        window.processLogin = async function() {
+            const un = document.getElementById('inputUsername').value.trim().toLowerCase();
             const pw = document.getElementById('inputPassword').value.trim();
+            const btn = document.getElementById('loginBtn');
+            const msg = document.getElementById('statusMsg');
             
             if (!un || !pw) { alert("請輸入帳號與密碼！"); return; }
             
-            if (dbUsers[un] && dbUsers[un].password === pw) {
-                const role = dbUsers[un].role;
-                
-                // 防呆：禁止一般巡邏保全 (user) 登入這個後台入口
-                if (role === 'user') {
-                    alert("⚠️ 權限不足！一般巡邏員請使用「手機端專屬 APP」網址登入。");
-                    return;
-                }
+            btn.disabled = true;
+            btn.innerText = "驗證中...";
+            msg.innerText = "🔐 正在與 Firebase 伺服器進行安全連線...";
 
-                // 將登入憑證存入本機
-                const currentUser = { username: un, role: role, name: dbUsers[un].name };
-                localStorage.setItem('cloudCurrentUser', JSON.stringify(currentUser));
+            // 🎩 魔術發生地：自動將短帳號補齊成虛擬信箱格式
+            const virtualEmail = `${un}${VIRTUAL_DOMAIN}`;
+
+            try {
+                // 呼叫 Firebase 伺服器進行加密驗證
+                await signInWithEmailAndPassword(auth, virtualEmail, pw);
+                // 成功的話，上面的 onAuthStateChanged 會接手處理後續跳轉
+            } catch (error) {
+                console.error("登入錯誤代碼:", error.code);
+                btn.disabled = false;
+                btn.innerText = "登 入 系 統";
                 
-                document.getElementById('statusMsg').innerText = "✅ 登入成功，正在跳轉...";
-                
-                // 呼叫自動跳轉
-                autoRedirect(role);
-            } else { 
-                alert("❌ 帳號或密碼錯誤！請重新輸入。"); 
+                // 判斷常見錯誤
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    alert("❌ 帳號或密碼錯誤！\n(請確認該帳號已在管理後台建立)");
+                } else {
+                    alert(`❌ 登入失敗：${error.message}`);
+                }
+                msg.innerText = "🔴 請重新登入";
             }
         };
 
         // 🚨 核心分流樞紐 (Routing)
         function autoRedirect(role) {
+            // 防呆：禁止一般巡邏保全 (user) 登入這個後台入口
+            if (role === 'user') {
+                alert("⚠️ 權限不足！一般巡邏員請使用「手機端專屬 APP」網址登入。");
+                auth.signOut();
+                return;
+            }
+
             if (role === 'admin' || role === 'sub_admin') {
                 window.location.replace('admin_dashboard.html');
             } else if (role === 'engineering') {
@@ -157,8 +179,8 @@
             } else if (role === 'cleaning') {
                 window.location.replace('cleaning.html');
             } else {
-                alert("未知的權限設定，請聯絡系統管理員。");
-                localStorage.removeItem('cloudCurrentUser');
+                alert("未知的權限設定，請聯絡管理員。");
+                auth.signOut();
                 window.location.reload();
             }
         }
