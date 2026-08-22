@@ -121,6 +121,38 @@
                 <h3>📋 待處理與完工紀錄</h3>
                 <button class="btn btn-warning" onclick="window.exportWorkOrders()">📤 備份工單紀錄</button>
             </div>
+    <!-- 👇 新增的篩選器面板 👇 -->
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
+                
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
+                    <input type="text" id="filterKeyword" class="form-control" placeholder="編號、地點、說明..." onkeyup="window.applyFilters()" style="padding: 8px;">
+                </div>
+                
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
+                    <input type="date" id="filterStartDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                </div>
+                
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
+                    <input type="date" id="filterEndDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                </div>
+                
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 處理狀態</label>
+                    <select id="filterStatus" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                        <option value="all">全部狀態</option>
+                        <option value="待處理">🟠 待處理</option>
+                        <option value="已完成">✅ 已完成</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; align-items: flex-end; margin-top: 18px;">
+                    <button class="btn btn-secondary" onclick="window.clearFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
+                </div>
+            </div>
+            <!-- 👆 篩選器面板結束 👆 -->
             <table>
                 <thead>
                     <tr>
@@ -242,20 +274,67 @@
             });
         }
 
-        // --- 渲染表格 ---
+       // --- 篩選器觸發功能 ---
+        window.applyFilters = function() {
+            window.renderWorkOrders(); // 只要條件改變，就重新渲染表格
+        };
+
+        window.clearFilters = function() {
+            document.getElementById('filterKeyword').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterStatus').value = 'all';
+            window.renderWorkOrders();
+        };
+
+        // --- 升級版：支援篩選的渲染表格功能 ---
         window.renderWorkOrders = function() {
             const tbody = document.getElementById('workOrderTableBody');
             tbody.innerHTML = '';
             
-            // 依據單號排序 (新的在上面)
-            dbWorkOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
+            // 1. 取得畫面上所有的篩選條件
+            const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
+            const startDateRaw = document.getElementById('filterStartDate').value; // 格式: YYYY-MM-DD
+            const endDateRaw = document.getElementById('filterEndDate').value;     // 格式: YYYY-MM-DD
+            const statusFilter = document.getElementById('filterStatus').value;
 
-            if (dbWorkOrders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 20px;">目前沒有分配給清潔部的工單。</td></tr>';
+            // 將日期轉為 YYYYMMDD 的純數字字串，方便與我們的工單編號比對！
+            const startDate = startDateRaw ? startDateRaw.replace(/-/g, '') : '00000000';
+            const endDate = endDateRaw ? endDateRaw.replace(/-/g, '') : '99999999';
+
+            // 2. 進行陣列過濾 (只保留符合條件的工單)
+            let filteredOrders = dbWorkOrders.filter(order => {
+                // (A) 狀態過濾
+                if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+
+                // (B) 關鍵字過濾 (比對編號、地點、狀況說明、完工備註)
+                if (keyword) {
+                    const searchStr = `${order.refNumber} ${order.location} ${order.description || ''} ${order.completeRemark || ''}`.toLowerCase();
+                    if (!searchStr.includes(keyword)) return false;
+                }
+
+                // (C) 日期範圍過濾 (利用單號中間的日期 YYYYMMDD 來比對，例如 ENG-20231025-A1B2)
+                const dateMatch = order.refNumber.match(/-(\d{8})-/);
+                if (dateMatch) {
+                    const orderDate = dateMatch[1];
+                    // 如果工單日期早於開始日期，或晚於結束日期，就剔除
+                    if (orderDate < startDate || orderDate > endDate) return false;
+                }
+
+                return true; // 通過所有考驗，保留這筆資料
+            });
+
+            // 3. 排序 (日期與編號最新的在最上面)
+            filteredOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
+
+            // 4. 判斷是否有資料
+            if (filteredOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 30px;">找不到符合條件的工單。</td></tr>';
                 return;
             }
 
-            dbWorkOrders.forEach(order => {
+            // 5. 渲染過濾後的資料到畫面上
+            filteredOrders.forEach(order => {
                 const statusClass = order.status === '已完成' ? 'status-done' : 'status-pending';
                 const statusBadge = `<span class="badge ${statusClass}">${order.status}</span>`;
 
@@ -270,7 +349,6 @@
                        </div>`
                     : '';
 
-                // 操作按鈕邏輯
                 let actionBtns = '';
                 if (order.status !== '已完成') {
                     actionBtns += `<button class="btn btn-success" onclick="window.openCompleteModal('${order.id}')">✅ 標記完工</button>`;
@@ -295,7 +373,6 @@
                 `;
             });
         };
-
         // --- 完工與修改報告邏輯 ---
         window.openCompleteModal = function(orderId) {
             currentCompleteOrderId = orderId;
