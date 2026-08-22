@@ -208,7 +208,13 @@
             </div>
         </div>
     </div>
-
+    <!-- 👇 圖片點擊放大預覽視窗 👇 -->
+    <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
+        <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+        <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
+        <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
+    </div>
+    <!-- 👆 圖片預覽視窗結束 👆 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc } 
@@ -339,13 +345,22 @@
                 const statusBadge = `<span class="badge ${statusClass}">${order.status}</span>`;
 
                 const initialPhotoHtml = order.photo 
-                    ? `<div style="margin-top:6px;"><img src="${order.photo}" style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain;"></div>` 
+                    ? `<div style="margin-top:6px;">
+                        <img src="${order.photo}" onclick="window.openImageModal('${order.photo}')" 
+                             style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer; transition:0.2s;" 
+                             onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                       </div>` 
                     : '';
 
+                // (2) 完工處理照片
                 const completeInfoHtml = order.status === '已完成' && (order.completeRemark || order.completePhoto)
                     ? `<div style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-left: 3px solid #28a745; font-size: 13px; border-radius: 4px;">
                         <strong>✅ 完工回報：</strong>${order.completeRemark || '<span style="color:#888;">無備註</span>'}<br>
-                        ${order.completePhoto ? `<img src="${order.completePhoto}" style="max-height:80px; margin-top:5px; border-radius:4px; border:1px solid #ccc; object-fit:contain;">` : ''}
+                        ${order.completePhoto ? `
+                            <img src="${order.completePhoto}" onclick="window.openImageModal('${order.completePhoto}')" 
+                                 style="max-height:80px; margin-top:5px; border-radius:4px; border:1px solid #ccc; object-fit:contain; cursor:pointer; transition:0.2s;" 
+                                 onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                        ` : ''}
                        </div>`
                     : '';
 
@@ -504,7 +519,17 @@
                 window.performLogout(); 
             } catch(e) { alert("更新失敗"); }
         };
+        // --- 圖片放大預覽功能 ---
+        window.openImageModal = function(base64Src) {
+            if (!base64Src) return;
+            document.getElementById('enlargedImage').src = base64Src;
+            document.getElementById('imageViewerModal').style.display = 'flex';
+        };
 
+        window.closeImageModal = function() {
+            document.getElementById('imageViewerModal').style.display = 'none';
+            document.getElementById('enlargedImage').src = ''; // 清空記憶體
+        };
         // 啟動驗證
         window.onload = window.checkAuth;
     </script>
