@@ -33,6 +33,65 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        
+        /* ========================================= */
+        /* 📱 手機版專屬樣式 (螢幕寬度小於 768px 時自動觸發) */
+        /* ========================================= */
+        @media (max-width: 768px) {
+            .topbar { flex-direction: column; align-items: flex-start; padding: 15px; gap: 12px; }
+            .topbar h2 { font-size: 20px; }
+            .topbar div { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+            
+            .content-body { padding: 10px; }
+            .card { padding: 15px 10px; }
+            .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            
+            table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
+            thead tr { display: none; }
+            
+            tr { 
+                margin-bottom: 15px; 
+                border: 1px solid #ddd; 
+                border-radius: 8px; 
+                padding: 10px; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+                background: white;
+            }
+            
+            td { 
+                border: none; 
+                border-bottom: 1px dashed #eee; 
+                position: relative; 
+                padding: 10px 0 10px 85px; 
+                text-align: left; 
+                min-height: 24px;
+            }
+            td:last-child { border-bottom: none; padding: 15px 0 5px 0; text-align: center; }
+            
+            td::before {
+                position: absolute; 
+                top: 12px; 
+                left: 0; 
+                width: 75px;
+                font-weight: bold; 
+                color: var(--primary); 
+                font-size: 13px;
+            }
+            td:nth-of-type(1)::before { content: "編號 :"; }
+            td:nth-of-type(2)::before { content: "地點 :"; }
+            td:nth-of-type(3)::before { content: "說明 :"; }
+            td:nth-of-type(4)::before { content: "時間 :"; }
+            td:nth-of-type(5)::before { content: "狀態 :"; }
+            
+            .btn { 
+                width: 100%; 
+                margin-bottom: 8px; 
+                padding: 12px; 
+                font-size: 15px; 
+                box-sizing: border-box; 
+                display: block; 
+            }
+        }
     </style>
 </head>
 <body>
@@ -56,6 +115,40 @@
                 <h3>📋 待處理與完工紀錄</h3>
                 <button class="btn btn-warning" onclick="window.exportWorkOrders()">📤 備份工單紀錄</button>
             </div>
+            
+            <!-- 👇 新增的篩選器面板 👇 -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
+                
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
+                    <input type="text" id="filterKeyword" class="form-control" placeholder="編號、地點、說明..." onkeyup="window.applyFilters()" style="padding: 8px;">
+                </div>
+                
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
+                    <input type="date" id="filterStartDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                </div>
+                
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
+                    <input type="date" id="filterEndDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                </div>
+                
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 處理狀態</label>
+                    <select id="filterStatus" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                        <option value="all">全部狀態</option>
+                        <option value="待處理">🟠 待處理</option>
+                        <option value="已完成">✅ 已完成</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; align-items: flex-end; margin-top: 18px;">
+                    <button class="btn btn-secondary" onclick="window.clearFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
+                </div>
+            </div>
+            <!-- 👆 篩選器面板結束 👆 -->
+            
             <table>
                 <thead>
                     <tr>
@@ -112,6 +205,14 @@
         </div>
     </div>
 
+    <!-- 👇 圖片點擊放大預覽視窗 👇 -->
+    <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
+        <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+        <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
+        <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
+    </div>
+    <!-- 👆 圖片預覽視窗結束 👆 -->
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc } 
@@ -135,6 +236,20 @@
         let dbWorkOrders = [];
         let currentCompleteOrderId = null;
         let currentCompletePhotoBase64 = "";
+
+        // ==========================================
+        // 🛡️ 資安防護：XSS HTML 字元過濾函數
+        // ==========================================
+        window.escapeHTML = function(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>'"]/g, function(tag) {
+                const charsToReplace = {
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                    "'": '&#39;', '"': '&quot;'
+                };
+                return charsToReplace[tag] || tag;
+            });
+        };
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
@@ -175,30 +290,89 @@
             });
         }
 
-        // --- 渲染表格 ---
+        // --- 篩選器觸發功能 ---
+        window.applyFilters = function() {
+            window.renderWorkOrders(); 
+        };
+
+        window.clearFilters = function() {
+            document.getElementById('filterKeyword').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterStatus').value = 'all';
+            window.renderWorkOrders();
+        };
+
+        // --- 升級版：支援篩選與防護的渲染表格功能 ---
         window.renderWorkOrders = function() {
             const tbody = document.getElementById('workOrderTableBody');
             tbody.innerHTML = '';
             
-            dbWorkOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
+            // 1. 取得畫面上所有的篩選條件
+            const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
+            const startDateRaw = document.getElementById('filterStartDate').value; 
+            const endDateRaw = document.getElementById('filterEndDate').value;     
+            const statusFilter = document.getElementById('filterStatus').value;
 
-            if (dbWorkOrders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 20px;">目前沒有分配給工程部的工單。</td></tr>';
+            // 將日期轉為 YYYYMMDD 的純數字字串，方便與我們的工單編號比對
+            const startDate = startDateRaw ? startDateRaw.replace(/-/g, '') : '00000000';
+            const endDate = endDateRaw ? endDateRaw.replace(/-/g, '') : '99999999';
+
+            // 2. 進行陣列過濾 
+            let filteredOrders = dbWorkOrders.filter(order => {
+                if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+
+                if (keyword) {
+                    const searchStr = `${order.refNumber} ${order.location} ${order.description || ''} ${order.completeRemark || ''}`.toLowerCase();
+                    if (!searchStr.includes(keyword)) return false;
+                }
+
+                const dateMatch = order.refNumber.match(/-(\d{8})-/);
+                if (dateMatch) {
+                    const orderDate = dateMatch[1];
+                    if (orderDate < startDate || orderDate > endDate) return false;
+                }
+
+                return true; 
+            });
+
+            // 3. 排序 (日期與編號最新的在最上面)
+            filteredOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
+
+            // 4. 判斷是否有資料
+            if (filteredOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 30px;">找不到符合條件的工單。</td></tr>';
                 return;
             }
 
-            dbWorkOrders.forEach(order => {
+            // 5. 渲染過濾後的資料到畫面上
+            filteredOrders.forEach(order => {
+                // 🛡️ 實施 XSS 過濾
+                const safeRefNumber = window.escapeHTML(order.refNumber);
+                const safeReporter = window.escapeHTML(order.reporter || '保全');
+                const safeLocation = window.escapeHTML(order.location);
+                const safeDesc = order.description ? window.escapeHTML(order.description) : '<span style="color:#aaa;">無文字說明</span>';
+                const safeRemark = order.completeRemark ? window.escapeHTML(order.completeRemark) : '<span style="color:#888;">無備註</span>';
+
                 const statusClass = order.status === '已完成' ? 'status-done' : 'status-pending';
                 const statusBadge = `<span class="badge ${statusClass}">${order.status}</span>`;
 
                 const initialPhotoHtml = order.photo 
-                    ? `<div style="margin-top:6px;"><img src="${order.photo}" style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain;"></div>` 
+                    ? `<div style="margin-top:6px;">
+                        <img src="${order.photo}" onclick="window.openImageModal('${order.photo}')" 
+                             style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer; transition:0.2s;" 
+                             onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                       </div>` 
                     : '';
 
                 const completeInfoHtml = order.status === '已完成' && (order.completeRemark || order.completePhoto)
                     ? `<div style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-left: 3px solid #28a745; font-size: 13px; border-radius: 4px;">
-                        <strong>✅ 完工回報：</strong>${order.completeRemark || '<span style="color:#888;">無備註</span>'}<br>
-                        ${order.completePhoto ? `<img src="${order.completePhoto}" style="max-height:80px; margin-top:5px; border-radius:4px; border:1px solid #ccc; object-fit:contain;">` : ''}
+                        <strong>✅ 完工回報：</strong>${safeRemark}<br>
+                        ${order.completePhoto ? `
+                            <img src="${order.completePhoto}" onclick="window.openImageModal('${order.completePhoto}')" 
+                                 style="max-height:80px; margin-top:5px; border-radius:4px; border:1px solid #ccc; object-fit:contain; cursor:pointer; transition:0.2s;" 
+                                 onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                        ` : ''}
                        </div>`
                     : '';
 
@@ -212,10 +386,10 @@
 
                 tbody.innerHTML += `
                     <tr>
-                        <td><strong>${order.refNumber}</strong><br><span style="font-size:11px; color:#888;">通報人: ${order.reporter || '保全'}</span></td>
-                        <td style="color:var(--primary); font-weight:bold;">${order.location}</td>
+                        <td><strong>${safeRefNumber}</strong><br><span style="font-size:11px; color:#888;">通報人: ${safeReporter}</span></td>
+                        <td style="color:var(--primary); font-weight:bold;">${safeLocation}</td>
                         <td>
-                            <div>${order.description || '<span style="color:#aaa;">無文字說明</span>'}</div>
+                            <div>${safeDesc}</div>
                             ${initialPhotoHtml}
                             ${completeInfoHtml}
                         </td>
@@ -357,6 +531,18 @@
                 alert("密碼修改成功！請重新登入。");
                 window.performLogout(); 
             } catch(e) { alert("更新失敗"); }
+        };
+
+        // --- 圖片放大預覽功能 ---
+        window.openImageModal = function(base64Src) {
+            if (!base64Src) return;
+            document.getElementById('enlargedImage').src = base64Src;
+            document.getElementById('imageViewerModal').style.display = 'flex';
+        };
+
+        window.closeImageModal = function() {
+            document.getElementById('imageViewerModal').style.display = 'none';
+            document.getElementById('enlargedImage').src = ''; 
         };
 
         // 啟動驗證
