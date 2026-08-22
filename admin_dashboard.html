@@ -112,30 +112,33 @@
                     <div class="stat-card" style="border-left-color: var(--danger);"><div class="live-indicator"></div><h3>⚠️ 異常跳過點位數</h3><div class="value" id="statSkipped" style="color: var(--danger);">0</div></div>
                     <div class="stat-card" style="border-left-color: var(--info);"><div class="live-indicator"></div><h3>📢 異常報事總數</h3><div class="value" id="statIncidents" style="color: var(--info);">0</div></div>
                 </div>
+                
                 <div class="card">
-                <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
-                    <h3 style="margin: 0;">🛡️ 巡邏任務即時監控列表</h3>
-                    
-                    <!-- 👇 巡邏任務篩選器面板 👇 -->
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
-                        <div style="flex: 1; min-width: 140px;">
-                            <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
-                            <input type="text" id="taskFilterKeyword" class="form-control" placeholder="保全姓名、路線名稱..." onkeyup="window.applyTaskFilters()" style="padding: 8px;">
+                    <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+                        <h3 style="margin: 0;">🛡️ 巡邏任務即時監控列表</h3>
+                        
+                        <!-- 👇 巡邏任務篩選器面板 👇 -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
+                            <div style="flex: 1; min-width: 140px;">
+                                <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
+                                <input type="text" id="taskFilterKeyword" class="form-control" placeholder="保全姓名、路線名稱..." onkeyup="window.applyTaskFilters()" style="padding: 8px;">
+                            </div>
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
+                                <input type="date" id="taskFilterStartDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
+                            </div>
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
+                                <input type="date" id="taskFilterEndDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
+                            </div>
+                            <div style="display: flex; align-items: flex-end; margin-top: 18px;">
+                                <button class="btn btn-secondary" onclick="window.clearTaskFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
+                            </div>
                         </div>
-                        <div style="flex: 1; min-width: 130px;">
-                            <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
-                            <input type="date" id="taskFilterStartDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
-                        </div>
-                        <div style="flex: 1; min-width: 130px;">
-                            <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
-                            <input type="date" id="taskFilterEndDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
-                        </div>
-                        <div style="display: flex; align-items: flex-end; margin-top: 18px;">
-                            <button class="btn btn-secondary" onclick="window.clearTaskFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
-                        </div>
-                    </div>
-                    <!-- 👆 篩選器面板結束 👆 -->
-                    <!-- 👇 補回這裡的任務表格 👇 -->
+                        <!-- 👆 篩選器面板結束 👆 -->
+                    </div> <!-- 🔑 修正點 1：正確關閉 card-header -->
+
+                    <!-- 👇 任務表格 👇 -->
                     <table>
                         <thead>
                             <tr>
@@ -151,7 +154,8 @@
                         <tbody id="taskTableBody"></tbody>
                     </table>
                     <!-- 👆 任務表格結束 👆 -->
-                </div>
+                </div> <!-- 🔑 修正點 2：正確關閉 card -->
+            </div> <!-- 🔑 修正點 3：正確關閉 view-dashboard -->
 
             <!-- 視圖 2：路線與點位管理 -->
             <div id="view-management" class="view-section">
