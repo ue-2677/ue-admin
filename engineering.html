@@ -33,7 +33,6 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        
         /* ========================================= */
         /* 📱 手機版專屬樣式 (螢幕寬度小於 768px 時自動觸發) */
         /* ========================================= */
@@ -47,50 +46,20 @@
             .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
             
             table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
-            thead tr { display: none; }
+            thead tr { display: none; } 
             
-            tr { 
-                margin-bottom: 15px; 
-                border: 1px solid #ddd; 
-                border-radius: 8px; 
-                padding: 10px; 
-                box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-                background: white;
-            }
-            
-            td { 
-                border: none; 
-                border-bottom: 1px dashed #eee; 
-                position: relative; 
-                padding: 10px 0 10px 85px; 
-                text-align: left; 
-                min-height: 24px;
-            }
+            tr { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); background: white; }
+            td { border: none; border-bottom: 1px dashed #eee; position: relative; padding: 10px 0 10px 85px; text-align: left; min-height: 24px; }
             td:last-child { border-bottom: none; padding: 15px 0 5px 0; text-align: center; }
             
-            td::before {
-                position: absolute; 
-                top: 12px; 
-                left: 0; 
-                width: 75px;
-                font-weight: bold; 
-                color: var(--primary); 
-                font-size: 13px;
-            }
+            td::before { position: absolute; top: 12px; left: 0; width: 75px; font-weight: bold; color: var(--primary); font-size: 13px; }
             td:nth-of-type(1)::before { content: "編號 :"; }
             td:nth-of-type(2)::before { content: "地點 :"; }
             td:nth-of-type(3)::before { content: "說明 :"; }
             td:nth-of-type(4)::before { content: "時間 :"; }
             td:nth-of-type(5)::before { content: "狀態 :"; }
             
-            .btn { 
-                width: 100%; 
-                margin-bottom: 8px; 
-                padding: 12px; 
-                font-size: 15px; 
-                box-sizing: border-box; 
-                display: block; 
-            }
+            .btn { width: 100%; margin-bottom: 8px; padding: 12px; font-size: 15px; box-sizing: border-box; display: block; }
         }
     </style>
 </head>
@@ -118,22 +87,18 @@
             
             <!-- 👇 新增的篩選器面板 👇 -->
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
-                
                 <div style="flex: 1; min-width: 140px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
                     <input type="text" id="filterKeyword" class="form-control" placeholder="編號、地點、說明..." onkeyup="window.applyFilters()" style="padding: 8px;">
                 </div>
-                
                 <div style="flex: 1; min-width: 130px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
                     <input type="date" id="filterStartDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
                 </div>
-                
                 <div style="flex: 1; min-width: 130px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
                     <input type="date" id="filterEndDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
                 </div>
-                
                 <div style="flex: 1; min-width: 120px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 處理狀態</label>
                     <select id="filterStatus" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
@@ -142,7 +107,6 @@
                         <option value="已完成">✅ 已完成</option>
                     </select>
                 </div>
-                
                 <div style="display: flex; align-items: flex-end; margin-top: 18px;">
                     <button class="btn btn-secondary" onclick="window.clearFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
                 </div>
@@ -204,7 +168,7 @@
             </div>
         </div>
     </div>
-
+    
     <!-- 👇 圖片點擊放大預覽視窗 👇 -->
     <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
         <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
@@ -212,11 +176,15 @@
         <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
     </div>
     <!-- 👆 圖片預覽視窗結束 👆 -->
-
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc } 
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc, getDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        
+        // 🚨 載入 Firebase Auth 引擎模組
+        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         // 🌟 1. 貼上你共用的 Firebase Config
         const firebaseConfig = {
@@ -230,6 +198,8 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app); // 啟動 Auth 引擎
+        const VIRTUAL_DOMAIN = "@patrol.com"; // 虛擬信箱網域
 
         let currentUser = null;
         let dbUsers = {};
@@ -243,35 +213,48 @@
         window.escapeHTML = function(str) {
             if (str === null || str === undefined) return '';
             return String(str).replace(/[&<>'"]/g, function(tag) {
-                const charsToReplace = {
-                    '&': '&amp;', '<': '&lt;', '>': '&gt;',
-                    "'": '&#39;', '"': '&quot;'
-                };
+                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
                 return charsToReplace[tag] || tag;
             });
         };
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
-        // --- 權限驗證邏輯 ---
-        window.checkAuth = function() {
-            const userStr = localStorage.getItem('cloudCurrentUser');
-            if (!userStr) { window.location.href = 'index.html'; return; }
-            
-            currentUser = JSON.parse(userStr);
-            if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'engineering') {
-                alert("權限不足，將返回登入頁！");
-                window.location.href = 'index.html'; return;
+        // ==========================================
+        // 🔐 登入驗證與監聽 (Auth 核心)
+        // ==========================================
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const username = user.email.replace(VIRTUAL_DOMAIN, '');
+                const userDoc = await getDoc(doc(db, "users", username));
+                
+                if (userDoc.exists()) {
+                    currentUser = { username: username, ...userDoc.data() };
+                    
+                    // 防呆檢查：只有這三種身分可以進工程部後台
+                    if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'engineering') {
+                        alert("權限不足，將返回登入頁！");
+                        auth.signOut();
+                        window.location.replace('index.html');
+                        return;
+                    }
+                    
+                    document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
+                    initRealtimeListeners();
+                } else {
+                    auth.signOut();
+                    window.location.replace('index.html');
+                }
+            } else {
+                window.location.replace('index.html');
             }
-            
-            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
-            initRealtimeListeners();
-        };
+        });
 
-        window.performLogout = function() {
+        window.performLogout = async function() {
             if(confirm("確定要登出系統嗎？")) { 
-                localStorage.removeItem('cloudCurrentUser'); 
-                window.location.href = 'index.html'; 
+                await auth.signOut();
+                localStorage.removeItem('cloudCurrentUser'); // 清除舊版殘留
+                window.location.replace('index.html'); 
             }
         };
 
@@ -290,11 +273,8 @@
             });
         }
 
-        // --- 篩選器觸發功能 ---
-        window.applyFilters = function() {
-            window.renderWorkOrders(); 
-        };
-
+       // --- 篩選器觸發功能 ---
+        window.applyFilters = function() { window.renderWorkOrders(); };
         window.clearFilters = function() {
             document.getElementById('filterKeyword').value = '';
             document.getElementById('filterStartDate').value = '';
@@ -303,51 +283,40 @@
             window.renderWorkOrders();
         };
 
-        // --- 升級版：支援篩選與防護的渲染表格功能 ---
         window.renderWorkOrders = function() {
             const tbody = document.getElementById('workOrderTableBody');
             tbody.innerHTML = '';
             
-            // 1. 取得畫面上所有的篩選條件
             const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
             const startDateRaw = document.getElementById('filterStartDate').value; 
             const endDateRaw = document.getElementById('filterEndDate').value;     
             const statusFilter = document.getElementById('filterStatus').value;
 
-            // 將日期轉為 YYYYMMDD 的純數字字串，方便與我們的工單編號比對
             const startDate = startDateRaw ? startDateRaw.replace(/-/g, '') : '00000000';
             const endDate = endDateRaw ? endDateRaw.replace(/-/g, '') : '99999999';
 
-            // 2. 進行陣列過濾 
             let filteredOrders = dbWorkOrders.filter(order => {
                 if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-
                 if (keyword) {
                     const searchStr = `${order.refNumber} ${order.location} ${order.description || ''} ${order.completeRemark || ''}`.toLowerCase();
                     if (!searchStr.includes(keyword)) return false;
                 }
-
                 const dateMatch = order.refNumber.match(/-(\d{8})-/);
                 if (dateMatch) {
                     const orderDate = dateMatch[1];
                     if (orderDate < startDate || orderDate > endDate) return false;
                 }
-
                 return true; 
             });
 
-            // 3. 排序 (日期與編號最新的在最上面)
             filteredOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
 
-            // 4. 判斷是否有資料
             if (filteredOrders.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 30px;">找不到符合條件的工單。</td></tr>';
                 return;
             }
 
-            // 5. 渲染過濾後的資料到畫面上
             filteredOrders.forEach(order => {
-                // 🛡️ 實施 XSS 過濾
                 const safeRefNumber = window.escapeHTML(order.refNumber);
                 const safeReporter = window.escapeHTML(order.reporter || '保全');
                 const safeLocation = window.escapeHTML(order.location);
@@ -506,7 +475,9 @@
             }
         };
 
-        // --- 修改個人密碼 ---
+        // ==========================================
+        // 🔐 升級版：修改個人密碼 (Auth API)
+        // ==========================================
         window.openSelfPasswordModal = function() {
             document.getElementById('selfOldPassword').value = ''; 
             document.getElementById('selfNewPassword').value = '';
@@ -521,16 +492,25 @@
             
             if (!oldPw || !newPw || !confPw) { alert("請填寫所有密碼欄位！"); return; }
             if (newPw !== confPw) { alert("新密碼不相符！"); return; }
-            
-            const un = currentUser.username;
-            if (dbUsers[un].password !== oldPw) { alert("舊密碼錯誤！"); return; }
+            if (newPw.length < 6) { alert("新密碼至少需要 6 個字元！"); return; }
             
             try {
-                await updateDoc(doc(db, "users", un), { password: newPw });
+                // 必須先拿舊密碼向伺服器證明「是我本人」
+                const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPw);
+                await reauthenticateWithCredential(auth.currentUser, credential);
+                
+                // 驗證成功後，更新為新密碼
+                await updatePassword(auth.currentUser, newPw);
+                
                 document.getElementById('selfPasswordModal').style.display = 'none';
-                alert("密碼修改成功！請重新登入。");
-                window.performLogout(); 
-            } catch(e) { alert("更新失敗"); }
+                alert("✅ 密碼修改成功！基於安全機制，請使用新密碼重新登入。");
+                await auth.signOut();
+                window.location.replace('index.html'); 
+            } catch(e) { 
+                console.error(e);
+                if (e.code === 'auth/invalid-credential') alert("❌ 舊密碼輸入錯誤！");
+                else alert("❌ 更新失敗：" + e.message); 
+            }
         };
 
         // --- 圖片放大預覽功能 ---
@@ -542,11 +522,8 @@
 
         window.closeImageModal = function() {
             document.getElementById('imageViewerModal').style.display = 'none';
-            document.getElementById('enlargedImage').src = ''; 
+            document.getElementById('enlargedImage').src = ''; // 清空記憶體
         };
-
-        // 啟動驗證
-        window.onload = window.checkAuth;
     </script>
 </body>
 </html>
