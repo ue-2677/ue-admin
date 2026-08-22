@@ -57,26 +57,13 @@
         .view-section { display: none; animation: fadeIn 0.3s; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* 登入畫面樣式 */
-        #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--sidebar); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .login-box { background: white; padding: 40px; border-radius: 10px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .login-box h2 { text-align: center; margin-top: 0; margin-bottom: 25px; color: var(--sidebar); }
         .live-indicator { position: absolute; top: 20px; right: 20px; width: 10px; height: 10px; background-color: #28a745; border-radius: 50%; box-shadow: 0 0 8px #28a745; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="loginScreen">
-        <div class="login-box">
-            <h2>🏢 雲端後台登入</h2>
-            <div class="form-group"><label>登入帳號</label><input type="text" id="loginUsername" class="form-control" placeholder="請輸入帳號"></div>
-            <div class="form-group"><label>登入密碼</label><input type="password" id="loginPassword" class="form-control" placeholder="請輸入密碼"></div>
-            <button class="btn btn-primary" style="width: 100%; margin-top: 15px; font-size: 16px; padding: 10px;" onclick="window.performLogin()">登 入</button>
-        </div>
-    </div>
-
+    <!-- 💡 將原本預設顯示，改為 display: none; 等待驗證成功後再顯示 -->
     <div class="sidebar" id="sidebarContainer" style="display: none;">
         <div class="sidebar-header">🏢 雲端物業後台</div>
         <ul class="nav-menu">
@@ -87,7 +74,7 @@
             <li class="nav-item" onclick="window.open('cleaning.html', '_blank')">🧹 清潔部派單後台</li>
             <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
         </ul>
-        <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.1 (報事系統整合版)</p></div>
+        <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.5 (資安強固版)</p></div>
     </div>
 
     <div class="main-content" id="mainContentContainer" style="display: none;">
@@ -117,7 +104,6 @@
                     <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
                         <h3 style="margin: 0;">🛡️ 巡邏任務即時監控列表</h3>
                         
-                        <!-- 👇 巡邏任務篩選器面板 👇 -->
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
                             <div style="flex: 1; min-width: 140px;">
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
@@ -135,10 +121,7 @@
                                 <button class="btn btn-secondary" onclick="window.clearTaskFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
                             </div>
                         </div>
-                        <!-- 👆 篩選器面板結束 👆 -->
-                    </div> <!-- 🔑 修正點 1：正確關閉 card-header -->
-
-                    <!-- 👇 任務表格 👇 -->
+                    </div>
                     <table>
                         <thead>
                             <tr>
@@ -153,9 +136,8 @@
                         </thead>
                         <tbody id="taskTableBody"></tbody>
                     </table>
-                    <!-- 👆 任務表格結束 👆 -->
-                </div> <!-- 🔑 修正點 2：正確關閉 card -->
-            </div> <!-- 🔑 修正點 3：正確關閉 view-dashboard -->
+                </div>
+            </div>
 
             <!-- 視圖 2：路線與點位管理 -->
             <div id="view-management" class="view-section">
@@ -211,7 +193,7 @@
                         <button class="btn btn-primary" onclick="window.openUserModal()">➕ 新增人員</button>
                     </div>
                     <div style="padding: 15px; background: #e2e3e5; color: #383d41; font-size: 13px; border-bottom: 1px solid #eee;" id="subAdminNotice">
-                        💡 提示：最高管理員可編輯所有帳號；二級管理員僅能查看及新增，無法修改或刪除他人帳號。
+                        💡 提示：最高管理員可編輯所有帳號；若需強制重設他人密碼，請點擊「編輯」並直接輸入新密碼即可。
                     </div>
                     <table>
                         <thead><tr><th>帳號</th><th>姓名</th><th>密碼</th><th>權限等級</th><th>操作</th></tr></thead>
@@ -219,20 +201,21 @@
                     </table>
                 </div>
             </div>
+            
+            <div id="view-delete-logs" class="view-section">
+                <div class="card">
+                    <div class="card-header">🗑️ 系統刪除稽核軌跡 (Audit Trail)</div>
+                    <table>
+                        <thead><tr><th>刪除時間</th><th>操作人員</th><th>刪除項目類型</th><th>被刪除資料內容</th></tr></thead>
+                        <tbody id="deleteLogsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-    <div id="view-delete-logs" class="view-section">
-        <div class="card">
-            <div class="card-header">🗑️ 系統刪除稽核軌跡 (Audit Trail)</div>
-            <table>
-                <thead><tr><th>刪除時間</th><th>操作人員</th><th>刪除項目類型</th><th>被刪除資料內容</th></tr></thead>
-                <tbody id="deleteLogsTableBody"></tbody>
-            </table>
-        </div>
-    </div>
+    
     <!-- ================== 彈窗 Modal 區塊 ================== -->
     
-    <!-- 任務稽核明細表 -->
     <div id="taskDetailModal" class="modal">
         <div class="modal-content" style="width: 800px;">
             <h3 id="taskDetailTitle">任務詳細資訊</h3>
@@ -245,6 +228,7 @@
             </div>
         </div>
     </div>
+    
     <div id="dispatchModal" class="modal">
         <div class="modal-content" style="width:500px;">
             <h3 style="color: var(--primary);">📤 轉派異常報事</h3>
@@ -270,7 +254,6 @@
         </div>
     </div>
 
-    <!-- 新增/編輯巡邏點位 -->
     <div id="pointModal" class="modal">
         <div class="modal-content" style="width:500px;">
             <h3 id="pointModalTitle">新增巡邏點位</h3>
@@ -290,7 +273,6 @@
         </div>
     </div>
 
-    <!-- 新增/編輯巡邏路線 -->
     <div id="routeModal" class="modal">
         <div class="modal-content" style="width:750px;">
             <h3 id="routeModalTitle">新增巡邏路線</h3>
@@ -323,12 +305,11 @@
         </div>
     </div>
 
-    <!-- 新增/編輯人員 -->
     <div id="userModal" class="modal">
         <div class="modal-content" style="width:500px;">
             <h3 id="userModalTitle">新增巡邏人員帳號</h3>
             <input type="hidden" id="editOriginalUsername">
-            <div class="form-group"><label>登入帳號 (Username)</label><input type="text" id="userModalUsername" class="form-control" placeholder="不可重複"></div>
+            <div class="form-group"><label>登入帳號 (Username)</label><input type="text" id="userModalUsername" class="form-control" placeholder="不可重複 (設定後無法修改)"></div>
             <div class="form-group"><label>姓名 (顯示名稱)</label><input type="text" id="userModalName" class="form-control"></div>
             <div class="form-group"><label>登入密碼</label><input type="text" id="userModalPassword" class="form-control"></div>
             <div class="form-group">
@@ -348,7 +329,6 @@
         </div>
     </div>
 
-    <!-- 更改個人密碼 -->
     <div id="selfPasswordModal" class="modal">
         <div class="modal-content" style="width:400px;">
             <h3>更改個人密碼</h3>
@@ -362,25 +342,18 @@
         </div>
     </div>
 
-    <!-- ============================================== -->
-    <!-- Firebase SDK 與雲端核心邏輯 (使用 Module) -->
-    <!-- ============================================== -->
-    <!-- 👇 圖片點擊放大預覽視窗 👇 -->
     <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
         <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
         <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
         <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
     </div>
-    <!-- 👆 圖片預覽視窗結束 👆 -->
-   <!-- ============================================== -->
-    <!-- Firebase SDK 與雲端核心邏輯 (Auth 企業級安全版) -->
-    <!-- ============================================== -->
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, setDoc, query, orderBy, getDocs, where, getDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         
-        // 🚨 載入 Firebase Auth 引擎模組
+        // 🚨 移除了本頁面不需要的 signInWithEmailAndPassword
         import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
@@ -393,16 +366,14 @@
             appId: "1:203707145209:web:647068d7d0e4b843b47b28"
         };
 
-        // 啟動主引擎 (負責總幹事自己的登入狀態)
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // 🌟 啟動副引擎 (負責偷偷幫保全註冊帳號，不影響總幹事)
+        // 🌟 啟動副引擎 (負責偷偷幫員工註冊與修改密碼，不影響總幹事的登入狀態)
         const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
         const secondaryAuth = getAuth(secondaryApp);
 
-        // 全域變數
         let dbUsers = {};
         let dbRoutes = [];
         let dbPoints = [];
@@ -412,9 +383,6 @@
         let adminScannedUid = "";
         const VIRTUAL_DOMAIN = "@patrol.com";
 
-        // ==========================================
-        // 🛡️ 資安防護：XSS HTML 字元過濾函數
-        // ==========================================
         window.escapeHTML = function(str) {
             if (str === null || str === undefined) return '';
             return String(str).replace(/[&<>'"]/g, function(tag) {
@@ -424,17 +392,33 @@
         };
 
         // ==========================================
-        // 🔐 登入驗證與監聽 (Auth 核心)
+        // 🔐 登入驗證與監聽 (防護升級版)
         // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // 從信箱中還原短帳號
-                const username = user.email.replace(VIRTUAL_DOMAIN, '');
-                // 向資料庫確認此人的權限
+                let username = user.email.replace(VIRTUAL_DOMAIN, '');
+                
+                // 🔍 替身反查機制：利用 query 反查這個 Auth Email 屬於哪一個真實的 User 帳號
+                const q = query(collection(db, "users"), where("authEmail", "==", user.email));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    username = snap.docs[0].id; // 找回原本真實的帳號名稱
+                }
+
                 const userDoc = await getDoc(doc(db, "users", username));
                 
                 if (userDoc.exists()) {
-                    currentUser = { username: username, ...userDoc.data() };
+                    const data = userDoc.data();
+                    
+                    // 🛡️ 舊憑證防堵機制：如果這組帳號已被重設密碼（有新替身），但嘗試用舊的 Auth 信箱登入，直接踢除
+                    if (data.authEmail && data.authEmail !== user.email) {
+                        auth.signOut();
+                        alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請使用新密碼重新登入！");
+                        window.location.replace('index.html');
+                        return;
+                    }
+
+                    currentUser = { username: username, ...data };
                     
                     if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin') {
                         alert("權限不足，將返回登入頁！");
@@ -443,8 +427,7 @@
                         return;
                     }
                     
-                    // 驗證成功，顯示後台畫面
-                    document.getElementById('loginScreen').style.display = 'none';
+                    // 登入驗證且身分核准成功後，才顯示後台畫面
                     document.getElementById('sidebarContainer').style.display = 'flex';
                     document.getElementById('mainContentContainer').style.display = 'flex';
                     
@@ -457,20 +440,16 @@
                     window.location.replace('index.html');
                 }
             } else {
-                // 如果沒有 Firebase 通行證，直接踢回大門
+                // 沒有登入狀態，直接踢回 index.html
                 window.location.replace('index.html');
             }
         });
 
-        window.checkAuth = function() {
-            // 已交由 onAuthStateChanged 處理，維持相容性留空
-        };
-
         window.performLogout = async function() {
             if(confirm("確定要登出系統嗎？")) { 
                 await auth.signOut();
-                localStorage.removeItem('cloudCurrentUser'); // 清除舊版殘留
-                window.location.replace('index.html'); 
+                localStorage.removeItem('cloudCurrentUser'); 
+                window.location.replace('index.html');
             }
         };
 
@@ -482,27 +461,22 @@
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
                 if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
             });
-
             onSnapshot(collection(db, "points"), (snapshot) => {
                 dbPoints = []; snapshot.forEach(doc => { dbPoints.push({ id: doc.id, ...doc.data() }); });
                 if(document.getElementById('view-management').classList.contains('active')) window.loadPointsData();
             });
-
             onSnapshot(collection(db, "routes"), (snapshot) => {
                 dbRoutes = []; snapshot.forEach(doc => { dbRoutes.push({ id: doc.id, ...doc.data() }); });
                 if(document.getElementById('view-management').classList.contains('active')) window.loadRoutesData();
             });
-
             onSnapshot(collection(db, "uidMappings"), (snapshot) => {
                 dbUidMappings = {}; snapshot.forEach(doc => { dbUidMappings[doc.id] = doc.data().locationName; });
                 if(document.getElementById('view-management').classList.contains('active')) window.loadPointsData();
             });
-
             onSnapshot(query(collection(db, "tasks"), orderBy("startTimestamp", "desc")), (snapshot) => {
                 dbTasks = []; snapshot.forEach(doc => { dbTasks.push({ id: doc.id, ...doc.data() }); });
                 if(document.getElementById('view-dashboard').classList.contains('active')) window.loadDashboardData();
             });
-
             onSnapshot(query(collection(db, "deleteLogs"), orderBy("deletedTimestamp", "desc")), (snapshot) => {
                 const tbody = document.getElementById('deleteLogsTableBody');
                 if (!tbody) return;
@@ -555,7 +529,6 @@
             });
         };
 
-        // --- 任務過濾觸發器 ---
         window.applyTaskFilters = function() { window.loadDashboardData(); };
         window.clearTaskFilters = function() {
             document.getElementById('taskFilterKeyword').value = '';
@@ -564,7 +537,6 @@
             window.loadDashboardData();
         };
 
-        // --- 儀表板資料載入與整合邏輯 (含過濾) ---
         window.loadDashboardData = function() {
             const tbody = document.getElementById('taskTableBody'); 
             if (!tbody) return;
@@ -579,7 +551,6 @@
             });
             if(document.getElementById('statTotal')) document.getElementById('statTotal').innerText = dbTasks.length; 
             if(document.getElementById('statCompleted')) document.getElementById('statCompleted').innerText = completedCount;
-            if(document.getElementById('statOngoing')) document.getElementById('statOngoing').innerText = ongoingCount; 
             if(document.getElementById('statSkipped')) document.getElementById('statSkipped').innerText = totalSkipped;
             if(document.getElementById('statIncidents')) document.getElementById('statIncidents').innerText = totalIncidents;
 
@@ -823,14 +794,7 @@
         window.openDispatchModal = function(taskId, incidentIndex) {
             const task = dbTasks.find(t => t.id === taskId);
             const inc = task.incidents[incidentIndex];
-            
-            window.currentDispatchData = {
-                location: inc.pointName,
-                photo: inc.photo || "",
-                reporter: task.guardName,
-                reportTime: inc.timeStr
-            };
-
+            window.currentDispatchData = { location: inc.pointName, photo: inc.photo || "", reporter: task.guardName, reportTime: inc.timeStr };
             document.getElementById('dispatchLocation').innerText = inc.pointName;
             document.getElementById('dispatchText').value = inc.text || ""; 
             document.getElementById('dispatchModal').classList.add('active');
@@ -847,29 +811,20 @@
             try {
                 const q = query(collection(db, "workOrders"), where("department", "==", dept));
                 const querySnapshot = await getDocs(q);
-                const nextSequence = querySnapshot.size + 1; 
-                const refNumber = `${prefix}-${dateStr}-${String(nextSequence).padStart(3, '0')}`;
+                const refNumber = `${prefix}-${dateStr}-${String(querySnapshot.size + 1).padStart(3, '0')}`;
         
-                const orderData = {
-                    refNumber: refNumber,
-                    department: dept,
-                    location: window.currentDispatchData.location,
-                    description: descText,
-                    photo: window.currentDispatchData.photo,
-                    reporter: window.currentDispatchData.reporter,
-                    reportTime: window.currentDispatchData.reportTime,
-                    dispatchTime: new Date().toLocaleString(),
-                    status: "待處理"
-                };
-        
-                await addDoc(collection(db, "workOrders"), orderData);
+                await addDoc(collection(db, "workOrders"), {
+                    refNumber: refNumber, department: dept, location: window.currentDispatchData.location,
+                    description: descText, photo: window.currentDispatchData.photo, reporter: window.currentDispatchData.reporter,
+                    reportTime: window.currentDispatchData.reportTime, dispatchTime: new Date().toLocaleString(), status: "待處理"
+                });
                 alert(`✅ 成功派發！\n獨立工單編號：${refNumber}`);
                 document.getElementById('dispatchModal').classList.remove('active');
             } catch (e) { alert("派單失敗，請檢查網路連線。"); }
         };
 
         // ==========================================
-        // 👥 升級版：帳號管理 (雙引擎技術 + 防呆保護)
+        // 👥 替身密碼管理機制 (解決重設密碼與資料遺失)
         // ==========================================
         window.loadUsersData = function() {
             try {
@@ -889,11 +844,9 @@
                     else if (u.role === 'cleaning') roleBadge = '<span class="badge" style="background-color: #17a2b8; color: white;">清潔部人員</span>';
                     else roleBadge = '<span class="badge badge-info">一般巡邏員</span>';
 
-                    // 🔐 畫面上不再顯示明文密碼
                     const displayPassword = '<span style="color:#28a745; font-size:13px; font-weight:bold;">🔒 已加密</span>';
 
                     let actionBtns = '';
-                    // 🛡️ 防呆：確保 currentUser 存在才判斷
                     if (currentUser && currentUser.role === 'admin') {
                         actionBtns = `<button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.openUserModal('${username}')">✏️ 編輯</button>
                             <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteUser('${username}')">🗑️ 停權/刪除</button>`;
@@ -910,25 +863,22 @@
                     </tr>`;
                 }
                 
-                if (userCount === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">目前尚無人員資料，或載入中...</td></tr>';
-                }
-            } catch (err) {
-                console.error("載入人員列表發生錯誤:", err);
-            }
+                if (userCount === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">目前尚無人員資料，或載入中...</td></tr>'; }
+            } catch (err) { console.error("載入人員列表發生錯誤:", err); }
         };
+
         window.openUserModal = function(username = null) {
             if (username) {
                 if (currentUser.role !== 'admin' && username !== currentUser.username) { alert("無權編輯其他人員資料！"); return; }
-                document.getElementById('userModalTitle').innerText = "編輯人員資料 (僅限姓名與權限)";
+                document.getElementById('userModalTitle').innerText = "編輯人員資料與強制重設密碼";
                 document.getElementById('editOriginalUsername').value = username;
                 document.getElementById('userModalUsername').value = username; 
                 document.getElementById('userModalUsername').readOnly = true; 
                 document.getElementById('userModalName').value = dbUsers[username].name;
                 
-                // 編輯模式下，密碼欄位隱藏或設為提示，因為無法從純前端更改他人 Auth 密碼
-                document.getElementById('userModalPassword').value = "********";
-                document.getElementById('userModalPassword').readOnly = true;
+                document.getElementById('userModalPassword').value = "";
+                document.getElementById('userModalPassword').readOnly = false;
+                document.getElementById('userModalPassword').placeholder = "若不變更密碼請留空；輸入新密碼將強制重設！";
                 
                 document.getElementById('userModalRole').value = dbUsers[username].role || 'user';
             } else {
@@ -939,6 +889,7 @@
                 document.getElementById('userModalName').value = ""; 
                 document.getElementById('userModalPassword').value = "";
                 document.getElementById('userModalPassword').readOnly = false;
+                document.getElementById('userModalPassword').placeholder = "設定密碼 (至少6碼)";
                 document.getElementById('userModalRole').value = "user";
             }
             document.getElementById('userModal').classList.add('active');
@@ -955,25 +906,35 @@
             
             try {
                 if (origUn) {
-                    // 編輯模式：只更新 Firestore 中的名字和權限
                     if (currentUser.role !== 'admin' && origUn !== currentUser.username) { alert("無權限！"); return; }
-                    await updateDoc(doc(db, "users", origUn), { role: role, name: name });
-                    alert("人員資料已同步更新！\n(註：基於資安考量，若需重設該員密碼，請將其帳號刪除後重新建立)");
+                    
+                    let updatePayload = { role: role, name: name };
+
+                    if (pw) {
+                        if (pw.length < 6) { alert("新密碼至少需要 6 個字元！"); return; }
+                        document.getElementById('userModalTitle').innerText = "⏳ 正在建立新密碼驗證通道...";
+                        
+                        const shadowEmail = `${origUn}_alias_${Date.now()}${VIRTUAL_DOMAIN}`;
+                        
+                        await createUserWithEmailAndPassword(secondaryAuth, shadowEmail, pw);
+                        await secondaryAuth.signOut();
+                        
+                        updatePayload.authEmail = shadowEmail; 
+                    }
+
+                    await updateDoc(doc(db, "users", origUn), updatePayload);
+                    alert("✅ 人員資料已同步更新！" + (pw ? "\n(密碼已成功強制重設)" : ""));
+                    
                 } else {
-                    // 新增模式：使用副引擎建立 Auth 帳號
                     if (!pw || pw.length < 6) { alert("請設定新密碼 (至少6個字元)！"); return; }
                     if (dbUsers[un]) { alert("此帳號名稱已存在！"); return; }
                     
                     document.getElementById('userModalTitle').innerText = "⏳ 正在與 Google 安全伺服器連線建立帳號...";
                     
-                    // 1. 用副引擎建立真實的 Auth 加密帳號
                     const virtualEmail = `${un}${VIRTUAL_DOMAIN}`;
                     await createUserWithEmailAndPassword(secondaryAuth, virtualEmail, pw);
                     
-                    // 2. 將名字與權限寫入 Firestore (這裡絕對不存密碼)
                     await setDoc(doc(db, "users", un), { role: role, name: name, createdAt: new Date().toISOString() });
-                    
-                    // 3. 登出副引擎
                     await secondaryAuth.signOut();
                     alert(`✅ 新帳號 ${un} 建立成功！`);
                 }
@@ -990,10 +951,8 @@
             if (username === 'admin' || username === currentUser.username) { alert("不可刪除預設帳號或自己！"); return; }
             
             if (confirm(`警告：確定要停權並刪除帳號 ${username} 嗎？\n(此動作會立刻撤銷該員的所有登入與存取權限)`)) {
-                // 寫入刪除紀錄
                 const userData = dbUsers[username];
                 await window.logDeletion("人員帳號", userData);
-                // 刪除 Firestore 紀錄。配合安全規則，這會讓該員瞬間失去所有系統權限
                 await deleteDoc(doc(db, "users", username));
                 alert(`✅ 帳號 ${username} 已被停權。`);
             }
@@ -1016,11 +975,8 @@
             if (newPw.length < 6) { alert("新密碼至少需要 6 個字元！"); return; }
             
             try {
-                // 必須先拿舊密碼向伺服器證明「是我本人」
                 const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPw);
                 await reauthenticateWithCredential(auth.currentUser, credential);
-                
-                // 驗證成功後，更新為新密碼
                 await updatePassword(auth.currentUser, newPw);
                 
                 window.closeModal('selfPasswordModal');
@@ -1034,11 +990,6 @@
             }
         };
 
-        // --- 點位與路線管理 (保留原本邏輯) ---
-
-        // ==========================================
-        // 🗺️ 升級版：點位與路線管理 (加上陣列防呆)
-        // ==========================================
         window.loadPointsData = function() { 
             try {
                 const tbody = document.getElementById('pointsTableBody'); 
@@ -1051,7 +1002,6 @@
                 }
 
                 dbPoints.forEach((pt) => {
-                    // 🛡️ 防呆：避免舊資料沒有 floor 或 name
                     const fullPtName = `${pt.floor || ''} ${pt.name || ''}`.trim();
                     let boundUids = Object.keys(dbUidMappings || {}).filter(k => dbUidMappings[k] === fullPtName);
                     let uidDisplay = boundUids.length > 0 ? `<code style="color: var(--primary);">${boundUids.join(', ')}</code>` : '<span style="color:#999;">尚未綁定</span>';
@@ -1066,11 +1016,9 @@
                         </td>
                     </tr>`;
                 });
-            } catch(err) {
-                console.error("載入點位發生錯誤:", err);
-            }
+            } catch(err) { console.error("載入點位發生錯誤:", err); }
         };
-        window.openPointModal = function(ptId = null) { /* 原本邏輯 */ 
+        window.openPointModal = function(ptId = null) {
             const uniqueFloors = [...new Set(dbPoints.map(p => p.floor))];
             const dataList = document.getElementById('floorDatalist');
             const kwContainer = document.getElementById('quickFloorKeywords');
@@ -1098,7 +1046,7 @@
         };
         window.appendFloorText = function(text) { const input = document.getElementById('pointModalFloor'); if (input.value && !input.value.endsWith(' ')) input.value += ' ' + text; else input.value += text; input.focus(); };
         window.setFloorText = function(text) { document.getElementById('pointModalFloor').value = text; document.getElementById('pointModalFloor').focus(); };
-        window.savePoint = async function() { /* 原本邏輯 */ 
+        window.savePoint = async function() {
             const floor = document.getElementById('pointModalFloor').value.trim(), name = document.getElementById('pointModalName').value.trim();
             const inputUid = document.getElementById('pointModalUid').value.trim(), editIdx = document.getElementById('editPointId').value;
             if (!floor || !name) { alert("樓層與位置名為必填！"); return; }
@@ -1130,7 +1078,7 @@
         window.editPoint = function(id) { window.openPointModal(id); };
         window.deletePoint = async function(id) { if (confirm("確定要刪除這個巡邏點嗎？")) { await deleteDoc(doc(db, "points", id)); } };
 
-        window.exportRoutesBackup = function() { /* 原本邏輯 */ 
+        window.exportRoutesBackup = function() {
             const routesData = JSON.stringify(dbRoutes, null, 2);
             const blob = new Blob([routesData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -1138,7 +1086,7 @@
             a.download = `雲端巡邏路線備份_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         };
-        window.handleImportRoutes = function(event) { /* 原本邏輯 */ 
+        window.handleImportRoutes = function(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = async function(e) {
@@ -1163,7 +1111,7 @@
             };
             reader.readAsText(file);
         };
-        window.loadRoutesData = function() { /* 原本邏輯 */ 
+        window.loadRoutesData = function() {
             try {
                 const tbody = document.getElementById('routesTableBody'); 
                 if (!tbody) return;
@@ -1179,8 +1127,6 @@
                 
                 routes.forEach((route) => {
                     const globalInt = route.globalInterval || 0;
-                    
-                    // 🛡️ 關鍵防呆：如果這條路線的 points 壞掉或不存在，就塞給他一個空陣列，防止程式崩潰
                     const safePoints = route.points || []; 
                     
                     const formattedPoints = safePoints.map((pt, i) => {
@@ -1204,11 +1150,9 @@
                         </td>
                     </tr>`;
                 });
-            } catch (err) {
-                console.error("載入路線列表發生錯誤:", err);
-            }
+            } catch (err) { console.error("載入路線列表發生錯誤:", err); }
         };
-        window.openRouteModal = function(routeId = null) { /* 原本邏輯 */ 
+        window.openRouteModal = function(routeId = null) {
             const container = document.getElementById('pointsInputContainer'); container.innerHTML = '';
             if (routeId) {
                 const route = dbRoutes.find(r => r.id === routeId);
@@ -1224,7 +1168,7 @@
             }
             document.getElementById('routeModal').classList.add('active');
         };
-        window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxInterval = 0) { /* 原本邏輯 */ 
+        window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxInterval = 0) {
             const container = document.getElementById('pointsInputContainer');
             if (orderNumber === null) orderNumber = container.children.length + 1;
             const uniqueFloors = [...new Set(dbPoints.map(p => p.floor))];
@@ -1245,14 +1189,14 @@
             container.appendChild(div);
             if (selectedFloor) window.updateNameOptions(div.querySelector('.point-floor-select'), selectedName);
         };
-        window.updateNameOptions = function(floorSelectElem, preSelectedName = '') { /* 原本邏輯 */ 
+        window.updateNameOptions = function(floorSelectElem, preSelectedName = '') {
             const floor = floorSelectElem.value, nameSelect = floorSelectElem.parentElement.querySelector('.point-name-select');
             if (!floor) { nameSelect.innerHTML = '<option value="">-- 先選樓層 --</option>'; return; }
             let nameOpts = '<option value="">-- 選地點 --</option>';
             dbPoints.filter(p => p.floor === floor).forEach(p => { nameOpts += `<option value="${p.name}" ${p.name === preSelectedName ? 'selected' : ''}>${p.name}</option>`; });
             nameSelect.innerHTML = nameOpts;
         };
-        window.handleOrderChange = function(inputElement) { /* 原本邏輯 */ 
+        window.handleOrderChange = function(inputElement) {
             const newOrder = parseInt(inputElement.value); if (isNaN(newOrder) || newOrder < 1) { inputElement.value = 1; return; }
             const allInputs = Array.from(document.querySelectorAll('.point-order'));
             if (allInputs.some(inp => inp !== inputElement && parseInt(inp.value) === newOrder)) {
@@ -1262,12 +1206,12 @@
                 }
             } else { window.reorderUI(); }
         };
-        window.reorderUI = function() { /* 原本邏輯 */ 
+        window.reorderUI = function() {
             const container = document.getElementById('pointsInputContainer'), rows = Array.from(container.children);
             rows.sort((a, b) => (parseInt(a.querySelector('.point-order').value) || 999) - (parseInt(b.querySelector('.point-order').value) || 999));
             rows.forEach(row => container.appendChild(row));
         };
-        window.saveRoute = async function() { /* 原本邏輯 */ 
+        window.saveRoute = async function() {
             const name = document.getElementById('routeModalName').value.trim(), editIdx = document.getElementById('editRouteId').value;
             const routeOrder = parseInt(document.getElementById('routeModalOrder').value) || 999, isActive = document.getElementById('routeModalActive').checked;
             const globalInterval = parseInt(document.getElementById('routeModalGlobalInterval').value) || 0;
