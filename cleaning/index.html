@@ -313,7 +313,8 @@
             });
 
             onSnapshot(collection(db, "notices"), (snapshot) => {
-                const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                const d = new Date();
+                const today = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
                 const noticeList = document.getElementById('dailyNoticeList');
                 const container = document.getElementById('dailyNoticeContainer');
                 noticeList.innerHTML = '';
