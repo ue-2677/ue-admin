@@ -9,21 +9,21 @@
     <style>
         :root { --primary: #1a73e8; --bg: #f4f6f9; --text: #333; --sidebar: #2c3338; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --info: #17a2b8;}
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 250px; background-color: var(--sidebar); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar { width: 250px; background-color: var(--sidebar); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100;}
         .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #404850; text-align: center; letter-spacing: 1px; }
         .nav-menu { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
         .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #3a4248; transition: 0.2s; display: flex; align-items: center; gap: 10px; font-size: 15px; }
         .nav-item:hover, .nav-item.active { background-color: var(--primary); color: white; }
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative;}
         .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .topbar h2 { margin: 0; font-size: 22px; }
-        .content-body { padding: 30px; }
+        .content-body { padding: 30px; padding-bottom: 80px;} /* 預留底部空間給手機版導覽列 */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); position: relative; }
         .stat-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #666; }
         .stat-card .value { font-size: 28px; font-weight: bold; transition: color 0.3s; }
         .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 25px; }
-        .card-header { padding: 15px 20px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; }
+        .card-header { padding: 15px 20px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; flex-wrap: wrap; gap: 10px;}
         .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
         .tab-btn { padding: 12px 25px; cursor: pointer; border: none; background: transparent; font-size: 16px; font-weight: bold; color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: 0.2s; }
         .tab-btn:hover { color: var(--primary); }
@@ -36,6 +36,7 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-warning { background: var(--warning); color: #333; }
         .btn-info { background: var(--info); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.5; }
@@ -46,7 +47,8 @@
         .badge-warning { background-color: #fff3cd; color: #856404; }
         .badge-danger { background-color: #f8d7da; color: #721c24; }
         .badge-info { background-color: #cce5ff; color: #004085; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .badge-secondary { background-color: #e2e3e5; color: #383d41; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
         .modal.active { display: flex; }
         .modal-content { background: white; padding: 25px; border-radius: 10px; width: 700px; max-width: 95%; max-height: 85vh; overflow-y: auto; }
         .form-group { margin-bottom: 15px; }
@@ -59,11 +61,58 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .live-indicator { position: absolute; top: 20px; right: 20px; width: 10px; height: 10px; background-color: #28a745; border-radius: 50%; box-shadow: 0 0 8px #28a745; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* 🌟 個人選單樣式 */
+        .profile-trigger { cursor: pointer; font-weight: bold; color: var(--primary); font-size: 15px; padding: 8px 12px; border-radius: 8px; background: #e8f0fe; transition: 0.2s; user-select: none;}
+        .profile-trigger:hover { background: #d2e3fc; }
+        .profile-dropdown-content { display: none; position: absolute; top: 60px; right: 30px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; width: 150px; z-index: 1000; border: 1px solid #eee;}
+        .profile-dropdown-content.active { display: block; animation: fadeIn 0.2s; }
+
+        /* 🌟 手機版樣式 */
+        .mobile-bottom-nav { display: none; }
+        #view-mobile-home { display: none; }
+        
+        @media (max-width: 768px) {
+            .sidebar { display: none !important; }
+            .topbar { padding: 15px; }
+            .topbar h2 { font-size: 18px; }
+            .content-body { padding: 10px; padding-bottom: 70px; }
+            .profile-dropdown-content { right: 15px; top: 65px; }
+
+            /* 隱藏電腦版專屬功能 */
+            #view-dashboard, #view-management, #view-users, #view-delete-logs { display: none !important; }
+            .pc-only { display: none !important; }
+
+            /* 手機版底部導覽列 */
+            .mobile-bottom-nav { display: flex; justify-content: space-around; background: white; position: fixed; bottom: 0; left: 0; width: 100%; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; padding: 10px 0; }
+            .mobile-bottom-nav .nav-item { flex: 1; text-align: center; border: none; padding: 5px; flex-direction: column; gap: 5px; font-size: 12px; color: #666; cursor: pointer; }
+            .mobile-bottom-nav .nav-item.active { color: var(--primary); font-weight: bold; background: transparent; }
+
+            /* 手機版表格卡片化 (針對通知與助理需求) */
+            table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
+            thead tr { display: none; }
+            tr { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+            td { border: none; border-bottom: 1px dashed #eee; position: relative; padding: 10px 0 10px 85px; text-align: left; }
+            td:last-child { border-bottom: none; padding: 15px 0 5px 0; text-align: center; }
+            td::before { position: absolute; top: 12px; left: 0; width: 75px; font-weight: bold; color: var(--primary); font-size: 13px; }
+
+            #view-notices td:nth-of-type(1)::before { content: "內容 :"; }
+            #view-notices td:nth-of-type(2)::before { content: "期限 :"; }
+            #view-notices td:nth-of-type(3)::before { content: "部門 :"; }
+            #view-notices td:nth-of-type(4)::before { content: "操作 :"; }
+
+            #view-assistant td:nth-of-type(1)::before { content: "單號 :"; }
+            #view-assistant td:nth-of-type(2)::before { content: "地點 :"; }
+            #view-assistant td:nth-of-type(3)::before { content: "說明 :"; }
+            #view-assistant td:nth-of-type(4)::before { content: "時間 :"; }
+            #view-assistant td:nth-of-type(5)::before { content: "狀態 :"; }
+            #view-assistant td:nth-of-type(6)::before { content: "操作 :"; }
+        }
     </style>
 </head>
-<body>
+<body onclick="closeProfileMenu(event)">
 
-    <!-- 💡 將原本預設顯示，改為 display: none; 等待驗證成功後再顯示 -->
+    <!-- 電腦版側邊欄 -->
     <div class="sidebar" id="sidebarContainer" style="display: none;">
         <div class="sidebar-header">🏢 雲端物業後台</div>
         <ul class="nav-menu">
@@ -71,34 +120,52 @@
             <li class="nav-item" onclick="window.switchAdminView('view-management', this)">🗺️ 路線與點位管理</li>
             <li class="nav-item" onclick="window.switchAdminView('view-users', this)">👥 人員與權限管理</li>
             <li class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢 特別事項通知發布</li>
-            
-            <!-- 🌟 管理員專屬：查看物業助理發來的需求 -->
             <li class="nav-item" onclick="window.switchAdminView('view-assistant', this)">🔔 物業助理需求通知</li>
-
-            <!-- 🌟 終極防迷路路徑：明確指定回上一層後，進入該資料夾的 index.html -->
             <li class="nav-item" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</li>
             <li class="nav-item" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</li>
             <li class="nav-item" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</li>
-            
             <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
         </ul>
-        <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v31.5 (資安強固版)</p></div>
+        <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.6 (響應防護版)</p></div>
+    </div>
+
+    <!-- 手機版底部導覽列 -->
+    <div class="mobile-bottom-nav">
+        <div class="nav-item active" onclick="window.switchAdminView('view-mobile-home', this)">🏠<br>各部連結</div>
+        <div class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢<br>特別事項</div>
+        <div class="nav-item" onclick="window.switchAdminView('view-assistant', this)">🔔<br>助理需求</div>
     </div>
 
     <div class="main-content" id="mainContentContainer" style="display: none;">
         <div class="topbar">
-            <h2 id="topbarTitle">總覽儀表板 <span style="font-size: 12px; color: var(--success); font-weight: normal; margin-left: 10px;">🟢 即時連線中</span></h2>
+            <h2 id="topbarTitle">總覽儀表板 <span class="pc-only" style="font-size: 12px; color: var(--success); font-weight: normal; margin-left: 10px;">🟢 即時連線中</span></h2>
             <div style="display: flex; align-items: center; gap: 15px;">
-                <span id="clock" style="font-size: 14px; color: #666;"></span>
-                <div style="border-left: 1px solid #ccc; height: 20px;"></div>
-                <span id="currentUserDisplay" style="font-weight: bold; color: var(--primary); font-size: 15px;"></span>
-                <button class="btn btn-warning" style="padding: 6px 12px; font-size: 13px;" onclick="window.openSelfPasswordModal()">🔑 改密碼</button>
-                <button class="btn btn-success" style="padding: 6px 12px; font-size: 13px;" onclick="window.refreshCurrentView()">🔄 刷新資料</button>
-                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;" onclick="window.performLogout()">🚪 登出</button>
+                <span id="clock" class="pc-only" style="font-size: 14px; color: #666;"></span>
+                <button class="btn btn-success pc-only" style="padding: 6px 12px; font-size: 13px; margin:0;" onclick="window.refreshCurrentView()">🔄 刷新</button>
+                
+                <!-- 🌟 新增：個人下拉選單 -->
+                <div style="position: relative;">
+                    <div id="currentUserDisplay" class="profile-trigger" onclick="toggleProfileMenu(event)"></div>
+                    <div id="profileMenu" class="profile-dropdown-content">
+                        <button class="btn btn-warning" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
+                        <button class="btn btn-danger" style="width: 100%; margin: 0; font-size: 14px;" onclick="window.performLogout()">🚪 登出系統</button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="content-body">
+            
+            <!-- 📱 手機版專屬：主頁 (各部門跳轉) -->
+            <div id="view-mobile-home" class="view-section">
+                <div class="card" style="text-align: center;">
+                    <h3 style="margin-top:0; color: var(--primary);">跳轉至各部門系統</h3>
+                    <button class="btn btn-primary" style="padding: 15px; font-size: 16px; margin-bottom: 15px;" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</button>
+                    <button class="btn btn-info" style="padding: 15px; font-size: 16px; margin-bottom: 15px;" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</button>
+                    <button class="btn btn-warning" style="padding: 15px; font-size: 16px; margin-bottom: 0;" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</button>
+                </div>
+            </div>
+
             <!-- 視圖 1：總覽儀表板 -->
             <div id="view-dashboard" class="view-section active">
                 <div class="stats-grid">
@@ -111,7 +178,6 @@
                 <div class="card">
                     <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
                         <h3 style="margin: 0;">🛡️ 巡邏任務即時監控列表</h3>
-                        
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
                             <div style="flex: 1; min-width: 140px;">
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
@@ -157,7 +223,6 @@
                 <div id="tab-routes" class="tab-content active">
                     <div class="card">
                         <div class="card-header">
-                            <!-- ➕ 新增搜尋框 -->
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 現有巡邏路線
                                 <input type="text" id="routeFilterKeyword" class="form-control" placeholder="🔍 搜尋路線名稱..." onkeyup="window.applyRouteFilter()" style="padding: 6px; width: 200px; margin-bottom: 0;">
@@ -172,7 +237,6 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <!-- 🔄 修改標題加入 onclick 排序功能 -->
                                     <th style="width: 5%; cursor: pointer;" onclick="window.sortRoutes('order')">排序 <span id="sort-route-order">▲</span></th>
                                     <th style="width: 15%; cursor: pointer;" onclick="window.sortRoutes('name')">路線名稱 <span id="sort-route-name"></span></th>
                                     <th style="width: 8%;">狀態</th>
@@ -187,7 +251,6 @@
                 <div id="tab-points" class="tab-content">
                     <div class="card">
                         <div class="card-header">
-                            <!-- ➕ 新增搜尋框 -->
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 基礎巡邏點位資料庫
                                 <input type="text" id="pointFilterKeyword" class="form-control" placeholder="🔍 搜尋樓層或名稱..." onkeyup="window.applyPointFilter()" style="padding: 6px; width: 200px; margin-bottom: 0;">
@@ -200,7 +263,6 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <!-- 🔄 修改標題加入 onclick 排序功能 -->
                                     <th style="width: 25%; cursor: pointer;" onclick="window.sortPoints('floor')">樓層 / 區域 <span id="sort-point-floor"></span></th>
                                     <th style="width: 25%; cursor: pointer;" onclick="window.sortPoints('name')">位置名稱 <span id="sort-point-name"></span></th>
                                     <th style="width: 35%;">已綁定晶片 ID (UID)</th><th style="width: 15%;">操作</th>
@@ -216,11 +278,35 @@
             <div id="view-users" class="view-section">
                 <div class="card">
                     <div class="card-header">
-                        巡邏人員與權限管理 
+                        <div>巡邏人員與權限管理</div>
                         <button class="btn btn-primary" onclick="window.openUserModal()">➕ 新增人員</button>
                     </div>
-                    <div style="padding: 15px; background: #e2e3e5; color: #383d41; font-size: 13px; border-bottom: 1px solid #eee;" id="subAdminNotice">
-                        💡 提示：最高管理員可編輯所有帳號；若需強制重設他人密碼，請點擊「編輯」並直接輸入新密碼即可。
+                    
+                    <!-- 🌟 新增：人員過濾器 -->
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
+                        <div style="flex: 1; min-width: 140px;">
+                            <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 搜尋帳號或姓名</label>
+                            <input type="text" id="userFilterKeyword" class="form-control" placeholder="輸入關鍵字..." onkeyup="window.loadUsersData()" style="padding: 8px;">
+                        </div>
+                        <div style="flex: 1; min-width: 130px;">
+                            <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 篩選權限等級</label>
+                            <select id="userFilterRole" class="form-control" onchange="window.loadUsersData()" style="padding: 8px;">
+                                <option value="all">全部等級</option>
+                                <option value="admin">最高管理員</option>
+                                <option value="sub_admin">二級管理員</option>
+                                <option value="engineering">工程部人員</option>
+                                <option value="cleaning">清潔部人員</option>
+                                <option value="assistant">物業助理</option>
+                                <option value="user">一般巡邏員</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: flex-end; margin-top: 18px;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('userFilterKeyword').value=''; document.getElementById('userFilterRole').value='all'; window.loadUsersData();" style="padding: 9px 15px; margin:0;">🔄 重設</button>
+                        </div>
+                    </div>
+
+                    <div style="padding: 15px; background: #e2e3e5; color: #383d41; font-size: 13px; border-bottom: 1px solid #eee;">
+                        💡 提示：最高管理員可強制重設他人密碼，請點擊「編輯」並直接輸入新密碼即可。
                     </div>
                     <table>
                         <thead><tr><th>帳號</th><th>姓名</th><th>密碼</th><th>權限等級</th><th>操作</th></tr></thead>
@@ -238,14 +324,27 @@
                     </table>
                 </div>
             </div>
-
+            
             <!-- 視圖：特別事項通知 -->
             <div id="view-notices" class="view-section">
                 <div class="card">
                     <div class="card-header">
-                        📢 跨部門每日注意事項 / 特別通知
+                        <div>📢 跨部門每日注意事項 / 特別通知</div>
                         <button class="btn btn-primary" onclick="window.openNoticeModal()">➕ 新增通知</button>
                     </div>
+                    
+                    <!-- 🌟 新增：通知狀態過濾器 -->
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; border: 1px solid #eee;">
+                        <div style="flex: 1; max-width: 200px;">
+                            <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 篩選通知狀態</label>
+                            <select id="noticeFilterStatus" class="form-control" onchange="window.loadNoticesData()" style="padding: 8px;">
+                                <option value="all">全部通知</option>
+                                <option value="active">🟢 生效中</option>
+                                <option value="expired">⚪ 未生效 / 已過期</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <table>
                         <thead><tr><th style="width: 45%;">通知內容</th><th style="width: 20%;">有效期限</th><th style="width: 20%;">目標部門</th><th style="width: 15%;">操作</th></tr></thead>
                         <tbody id="noticesTableBody"></tbody>
@@ -256,9 +355,7 @@
             <!-- 視圖：物業助理需求通知 -->
             <div id="view-assistant" class="view-section">
                 <div class="card">
-                    <div class="card-header">
-                        🔔 物業助理需求通知 (管理部專屬)
-                    </div>
+                    <div class="card-header">🔔 物業助理需求通知 (管理部專屬)</div>
                     <table>
                         <thead>
                             <tr>
@@ -275,33 +372,10 @@
                 </div>
             </div>
 
-        </div> <!-- ✅ 這裡才是 content-body 真正的結尾 -->
-    </div> <!-- ✅ 這裡才是 main-content 真正的結尾 -->
+        </div> <!-- content-body end -->
+    </div> <!-- main-content end -->
 
     <!-- ================== 彈窗 Modal 區塊 ================== -->
-    <!-- ================== 彈窗 Modal 區塊 ================== -->
-   <div id="view-assistant" class="view-section">
-                <div class="card">
-                    <div class="card-header">
-                        🔔 物業助理需求通知 (管理部專屬)
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 12%;">單號</th>
-                                <th style="width: 15%;">發生地點</th>
-                                <th style="width: 38%;">需求說明與照片</th>
-                                <th style="width: 15%;">提報時間</th>
-                                <th style="width: 10%;">狀態</th>
-                                <th style="width: 10%;">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="assistantRequestsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div> 
-    </div>
     <!-- 新增特別事項通知 -->
     <div id="noticeModal" class="modal">
         <div class="modal-content" style="width:500px;">
@@ -330,6 +404,8 @@
             </div>
         </div>
     </div>
+
+    <!-- 任務詳細報表 -->
     <div id="taskDetailModal" class="modal">
         <div class="modal-content" style="width: 800px;">
             <h3 id="taskDetailTitle">任務詳細資訊</h3>
@@ -343,11 +419,11 @@
         </div>
     </div>
     
+    <!-- 轉派工單 -->
     <div id="dispatchModal" class="modal">
         <div class="modal-content" style="width:500px;">
             <h3 style="color: var(--primary);">📤 轉派異常報事</h3>
             <p style="font-size:13px; color:#666; margin-top:-10px;">回報地點：<strong id="dispatchLocation"></strong></p>
-            
             <div class="form-group">
                 <label>轉派至哪個部門？</label>
                 <select id="dispatchDept" class="form-control">
@@ -355,12 +431,10 @@
                     <option value="清潔部">🧹 清潔部</option>
                 </select>
             </div>
-    
             <div class="form-group">
                 <label>工單內容說明 (可補充修改)</label>
                 <textarea id="dispatchText" class="form-control" rows="4"></textarea>
             </div>
-    
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-success" style="flex: 1;" onclick="window.submitWorkOrder()">建立工單</button>
                 <button class="btn btn-danger" style="flex: 1;" onclick="document.getElementById('dispatchModal').classList.remove('active')">取消</button>
@@ -392,7 +466,6 @@
             <h3 id="routeModalTitle">新增巡邏路線</h3>
             <input type="hidden" id="editRouteId">
             <div class="form-group"><label>路線名稱</label><input type="text" id="routeModalName" class="form-control" placeholder="例如：C棟 地下停車場巡視"></div>
-            
             <div class="form-group" style="display: flex; gap: 15px;">
                 <div style="flex: 1;"><label>顯示順序</label><input type="number" id="routeModalOrder" class="form-control" value="1"></div>
                 <div style="flex: 1.2;"><label>統一點位限時 (分，0為無)</label><input type="number" id="routeModalGlobalInterval" class="form-control" value="0" min="0" placeholder="未設獨立限時將套用此值"></div>
@@ -403,7 +476,6 @@
                     </label>
                 </div>
             </div>
-
             <div class="form-group">
                 <label style="display: flex; justify-content: space-between; margin-top: 10px;">
                     <span>設定巡邏點與順序</span>
@@ -467,8 +539,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, setDoc, query, orderBy, getDocs, where, getDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        
-        // 🚨 移除了本頁面不需要的 signInWithEmailAndPassword
         import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
@@ -484,21 +554,12 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-
-        // 🌟 啟動副引擎 (負責偷偷幫員工註冊與修改密碼，不影響總幹事的登入狀態)
         const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
         const secondaryAuth = getAuth(secondaryApp);
 
-        let dbUsers = {};
-        let dbRoutes = [];
-        let dbPoints = [];
-        let dbUidMappings = {};
-        let dbTasks = [];
-        let dbNotices = []
-        let dbAssistantRequests = [];
-        let currentUser = null;
-        let adminScannedUid = "";
-        const VIRTUAL_DOMAIN = "@patrol.com";
+        let dbUsers = {}; let dbRoutes = []; let dbPoints = []; let dbUidMappings = {};
+        let dbTasks = []; let dbAssistantRequests = []; let dbNotices = [];
+        let currentUser = null; const VIRTUAL_DOMAIN = "@patrol.com";
 
         window.escapeHTML = function(str) {
             if (str === null || str === undefined) return '';
@@ -508,31 +569,36 @@
             });
         };
 
-        // ==========================================
-        // 🔐 登入驗證與監聽 (防護升級版)
-        // ==========================================
-        window.isSystemInitialized = false; // 控制 UI 避免重複繪製
-        let userDocListener = null; // 儲存監聽器
+        // 🌟 個人選單關閉邏輯
+        window.toggleProfileMenu = function(e) {
+            e.stopPropagation();
+            document.getElementById('profileMenu').classList.toggle('active');
+        };
+        window.closeProfileMenu = function(e) {
+            if (!event.target.matches('.profile-trigger')) {
+                const dropdowns = document.getElementsByClassName("profile-dropdown-content");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('active')) dropdowns[i].classList.remove('active');
+                }
+            }
+        };
+
+        // 登入驗證
+        window.isSystemInitialized = false; 
+        let userDocListener = null; 
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 let username = user.email.replace(VIRTUAL_DOMAIN, '');
-                
-                // 🔍 替身反查機制：利用 query 反查這個 Auth Email 屬於哪一個真實的 User 帳號
                 const q = query(collection(db, "users"), where("authEmail", "==", user.email));
                 const snap = await getDocs(q);
-                if (!snap.empty) {
-                    username = snap.docs[0].id; // 找回原本真實的帳號名稱
-                }
+                if (!snap.empty) username = snap.docs[0].id;
 
-                if (userDocListener) userDocListener(); // 清除舊監聽
+                if (userDocListener) userDocListener(); 
 
-                // 🌟 改用 onSnapshot 即時盯著這個帳號的變化 (包含 Session ID)
                 userDocListener = onSnapshot(doc(db, "users", username), (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        
-                        // 🛡️ 舊憑證防堵機制：密碼被重設時踢出
                         if (data.authEmail && data.authEmail !== user.email) {
                             if (userDocListener) userDocListener();
                             auth.signOut();
@@ -541,7 +607,6 @@
                             return;
                         }
 
-                        // 🛡️ 單一設備防護機制：雲端鑰匙與本機鑰匙不符時踢出
                         const dbSessionId = data.currentSessionId;
                         const myLocalSessionId = localStorage.getItem('patrolSessionId');
                         if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
@@ -562,16 +627,22 @@
                             return;
                         }
                         
-                        // 確保 UI 只會初始化一次，不會因為雲端資料變化而閃爍
                         if (!window.isSystemInitialized) {
                             window.isSystemInitialized = true;
                             document.getElementById('sidebarContainer').style.display = 'flex';
                             document.getElementById('mainContentContainer').style.display = 'flex';
                             
                             let roleName = (currentUser.role === 'admin') ? '最高管理員' : '二級管理員';
-                            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (${roleName})`;
+                            document.getElementById('currentUserDisplay').innerHTML = `👤 ${currentUser.name} (${roleName}) ▼`;
                             
                             initRealtimeListeners();
+
+                            // 🌟 判斷螢幕寬度決定初始畫面
+                            if (window.innerWidth <= 768) {
+                                window.switchAdminView('view-mobile-home', document.querySelector('.mobile-bottom-nav .nav-item'));
+                            } else {
+                                window.switchAdminView('view-dashboard', document.querySelector('.sidebar .nav-item.active'));
+                            }
                         }
                     } else {
                         if (userDocListener) userDocListener();
@@ -590,19 +661,16 @@
             if(confirm("確定要登出系統嗎？")) { 
                 await auth.signOut();
                 localStorage.removeItem('cloudCurrentUser'); 
-                localStorage.removeItem('patrolSessionId'); // 🌟 登出時確實銷毀鑰匙
+                localStorage.removeItem('patrolSessionId');
                 window.location.replace('../');
             }
         };
 
-        // ==========================================
-        // 📊 即時監聽與畫面載入
-        // ==========================================
         function initRealtimeListeners() {
             onSnapshot(query(collection(db, "notices"), orderBy("createdAt", "desc")), (snapshot) => {
               dbNotices = []; snapshot.forEach(doc => { dbNotices.push({ id: doc.id, ...doc.data() }); });
               if(document.getElementById('view-notices').classList.contains('active')) window.loadNoticesData();
-          });
+            });
             onSnapshot(query(collection(db, "workOrders"), where("department", "==", "管理部")), (snapshot) => {
                 dbAssistantRequests = []; 
                 snapshot.forEach(doc => { dbAssistantRequests.push({ id: doc.id, ...doc.data() }); });
@@ -644,70 +712,100 @@
             });
         }
 
-        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
-    window.loadNoticesData = function() {
-          const tbody = document.getElementById('noticesTableBody'); tbody.innerHTML = '';
-          if (dbNotices.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">目前無任何通知</td></tr>'; return; }
+        setInterval(() => { if(document.getElementById('clock')) document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
-          const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-          dbNotices.forEach(notice => {
-              const sDate = notice.startDate.replace(/-/g, '');
-              const eDate = notice.endDate.replace(/-/g, '');
-              // 判斷是否過期
-              let statusTag = (today >= sDate && today <= eDate) ? '<span class="badge badge-success">生效中</span>' : '<span class="badge badge-secondary">未生效/已過期</span>';
+        // 🌟 通知過濾與顯示
+        window.loadNoticesData = function() {
+            const tbody = document.getElementById('noticesTableBody'); tbody.innerHTML = '';
+            const statusFilter = document.getElementById('noticeFilterStatus') ? document.getElementById('noticeFilterStatus').value : 'all';
+            
+            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            let count = 0;
 
-              const depts = notice.departments.map(d => `<span class="badge badge-info" style="margin-right:4px;">${d}</span>`).join('');
+            dbNotices.forEach(notice => {
+                const sDate = notice.startDate.replace(/-/g, '');
+                const eDate = notice.endDate.replace(/-/g, '');
+                const isActive = (today >= sDate && today <= eDate);
+                
+                if (statusFilter === 'active' && !isActive) return;
+                if (statusFilter === 'expired' && isActive) return;
+                
+                count++;
+                let statusTag = isActive ? '<span class="badge badge-success">生效中</span>' : '<span class="badge badge-secondary">未生效 / 已過期</span>';
+                const depts = notice.departments.map(d => `<span class="badge badge-info" style="margin-right:4px;">${d}</span>`).join('');
 
-              tbody.innerHTML += `<tr>
-                  <td><strong>${window.escapeHTML(notice.text)}</strong><br><span style="font-size:11px; color:#888;">發布者: ${notice.createdBy}</span></td>
-                  <td style="font-family:monospace; font-size:13px;">${notice.startDate} ~ ${notice.endDate}<br>${statusTag}</td>
-                  <td>${depts}</td>
-                  <td><button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteNotice('${notice.id}')">🗑️ 刪除</button></td>
-              </tr>`;
-          });
-      };
+                tbody.innerHTML += `<tr>
+                    <td><strong>${window.escapeHTML(notice.text)}</strong><br><span style="font-size:11px; color:#888;">發布者: ${notice.createdBy}</span></td>
+                    <td style="font-family:monospace; font-size:13px;">${notice.startDate} ~ ${notice.endDate}<br>${statusTag}</td>
+                    <td>${depts}</td>
+                    <td><button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteNotice('${notice.id}')">🗑️ 刪除</button></td>
+                </tr>`;
+            });
 
-      window.openNoticeModal = function() {
-          document.getElementById('noticeTextInput').value = '';
-          const today = new Date().toISOString().slice(0, 10);
-          document.getElementById('noticeStartDate').value = today;
-          document.getElementById('noticeEndDate').value = today;
-          document.querySelectorAll('.notice-dept-chk').forEach(c => c.checked = (c.value === '工程部' || c.value === '清潔部'));
-          document.getElementById('noticeModal').classList.add('active');
-      };
+            if (count === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">目前無符合條件的通知</td></tr>'; }
+        };
 
-      window.saveNotice = async function() {
-          const text = document.getElementById('noticeTextInput').value.trim();
-          const sDate = document.getElementById('noticeStartDate').value;
-          const eDate = document.getElementById('noticeEndDate').value;
-          let targetDepts = [];
-          document.querySelectorAll('.notice-dept-chk:checked').forEach(c => targetDepts.push(c.value));
+        window.openNoticeModal = function() {
+            document.getElementById('noticeTextInput').value = '';
+            const today = new Date().toISOString().slice(0, 10);
+            document.getElementById('noticeStartDate').value = today;
+            document.getElementById('noticeEndDate').value = today;
+            document.querySelectorAll('.notice-dept-chk').forEach(c => c.checked = (c.value === '工程部' || c.value === '清潔部'));
+            document.getElementById('noticeModal').classList.add('active');
+        };
 
-          if (!text || !sDate || !eDate) { alert("請填寫完整內容與日期！"); return; }
-          if (sDate > eDate) { alert("結束日期不可早於開始日期！"); return; }
-          if (targetDepts.length === 0) { alert("至少選擇一個發布部門！"); return; }
+        window.saveNotice = async function() {
+            const text = document.getElementById('noticeTextInput').value.trim();
+            const sDate = document.getElementById('noticeStartDate').value;
+            const eDate = document.getElementById('noticeEndDate').value;
+            let targetDepts = [];
+            document.querySelectorAll('.notice-dept-chk:checked').forEach(c => targetDepts.push(c.value));
 
-          try {
-              await addDoc(collection(db, "notices"), {
-                  text: text, startDate: sDate, endDate: eDate, departments: targetDepts,
-                  createdBy: currentUser.name, createdAt: Date.now()
-              });
-              document.getElementById('noticeModal').classList.remove('active');
-              alert("✅ 通知發布成功！");
-          } catch(e) { alert("發布失敗，請檢查網路。"); }
-      };
+            if (!text || !sDate || !eDate) { alert("請填寫完整內容與日期！"); return; }
+            if (sDate > eDate) { alert("結束日期不可早於開始日期！"); return; }
+            if (targetDepts.length === 0) { alert("至少選擇一個發布部門！"); return; }
 
-      window.deleteNotice = async function(id) {
-          if(confirm("確定要刪除這條通知嗎？")) await deleteDoc(doc(db, "notices", id));
-      };
+            try {
+                await addDoc(collection(db, "notices"), {
+                    text: text, startDate: sDate, endDate: eDate, departments: targetDepts,
+                    createdBy: currentUser.name, createdAt: Date.now()
+                });
+                document.getElementById('noticeModal').classList.remove('active');
+                alert("✅ 通知發布成功！");
+            } catch(e) { alert("發布失敗，請檢查網路。"); }
+        };
+
+        window.deleteNotice = async function(id) {
+            if(confirm("確定要刪除這條通知嗎？")) await deleteDoc(doc(db, "notices", id));
+        };
+
         window.refreshCurrentView = function() {
             if(document.getElementById('view-dashboard').classList.contains('active')) window.loadDashboardData();
             if(document.getElementById('view-management').classList.contains('active')) { window.loadRoutesData(); window.loadPointsData(); }
             if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
             if(document.getElementById('view-notices').classList.contains('active')) window.loadNoticesData();
-            if(document.getElementById('view-assistant').classList.contains('active')) window.loadAssistantRequests(); // 🌟 補上這行
+            if(document.getElementById('view-assistant').classList.contains('active')) window.loadAssistantRequests(); 
         };
-        // --- 處理物業助理發來的需求清單 ---
+
+        // 🌟 視圖切換 (支援手機底部導航與側邊欄)
+        window.switchAdminView = function(viewId, element = null) {
+            if(element) {
+                // 清除所有選中狀態
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                element.classList.add('active');
+                
+                // 動態設定頂部標題
+                let titleText = element.innerText;
+                if(titleText.includes('\n')) titleText = titleText.split('\n')[1]; // 手機版
+                else if(titleText.includes(' ')) titleText = titleText.split(' ')[1]; // 電腦版
+                if(document.getElementById('topbarTitle')) document.getElementById('topbarTitle').innerText = titleText;
+            }
+
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            window.refreshCurrentView();
+        };
+
         window.loadAssistantRequests = function() {
             const tbody = document.getElementById('assistantRequestsTableBody');
             if (!tbody) return;
@@ -718,7 +816,6 @@
                 return;
             }
 
-            // 單號排序 (新的在最上面)
             dbAssistantRequests.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
 
             dbAssistantRequests.forEach(order => {
@@ -756,17 +853,7 @@
         };
 
         window.deleteWorkOrder = async function(id) {
-            if(confirm("確定要刪除這筆紀錄嗎？")) {
-                await deleteDoc(doc(db, "workOrders", id));
-            }
-        };
-        window.switchAdminView = function(viewId, element) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-            document.getElementById('topbarTitle').innerText = element.innerText.substring(3);
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            window.refreshCurrentView();
+            if(confirm("確定要刪除這筆紀錄嗎？")) { await deleteDoc(doc(db, "workOrders", id)); }
         };
 
         window.switchTab = function(tabId, element) {
@@ -796,30 +883,20 @@
             window.loadDashboardData();
         };
 
-        // ➕ 新增：點位與路線的排序狀態與控制函數
         window.routeSortState = { col: 'order', desc: false };
         window.pointSortState = { col: 'floor', desc: false };
-
         window.applyRouteFilter = function() { window.loadRoutesData(); };
         window.applyPointFilter = function() { window.loadPointsData(); };
 
         window.sortRoutes = function(col) {
-            if (window.routeSortState.col === col) {
-                window.routeSortState.desc = !window.routeSortState.desc;
-            } else {
-                window.routeSortState.col = col;
-                window.routeSortState.desc = false;
-            }
+            if (window.routeSortState.col === col) window.routeSortState.desc = !window.routeSortState.desc;
+            else { window.routeSortState.col = col; window.routeSortState.desc = false; }
             window.loadRoutesData();
         };
 
         window.sortPoints = function(col) {
-            if (window.pointSortState.col === col) {
-                window.pointSortState.desc = !window.pointSortState.desc;
-            } else {
-                window.pointSortState.col = col;
-                window.pointSortState.desc = false;
-            }
+            if (window.pointSortState.col === col) window.pointSortState.desc = !window.pointSortState.desc;
+            else { window.pointSortState.col = col; window.pointSortState.desc = false; }
             window.loadPointsData();
         };
 
@@ -1109,26 +1186,36 @@
             } catch (e) { alert("派單失敗，請檢查網路連線。"); }
         };
 
-        // ==========================================
-        // 👥 替身密碼管理機制 (解決重設密碼與資料遺失)
-        // ==========================================
+        // 🌟 升級：載入人員時進行條件過濾
         window.loadUsersData = function() {
             try {
                 const tbody = document.getElementById('usersTableBody'); 
                 if (!tbody) return;
                 tbody.innerHTML = '';
                 
+                const kw = document.getElementById('userFilterKeyword') ? document.getElementById('userFilterKeyword').value.toLowerCase().trim() : '';
+                const roleFilter = document.getElementById('userFilterRole') ? document.getElementById('userFilterRole').value : 'all';
+
                 let userCount = 0;
                 for (let username in dbUsers) {
-                    userCount++;
                     const u = dbUsers[username];
                     
+                    // 角色過濾
+                    if (roleFilter !== 'all' && u.role !== roleFilter) continue;
+                    
+                    // 關鍵字過濾
+                    if (kw) {
+                        const searchStr = `${username} ${u.name || ''}`.toLowerCase();
+                        if (!searchStr.includes(kw)) continue;
+                    }
+
+                    userCount++;
                     let roleBadge = '';
                     if (u.role === 'admin') roleBadge = '<span class="badge badge-danger">最高管理員</span>';
                     else if (u.role === 'sub_admin') roleBadge = '<span class="badge badge-warning">二級管理員</span>';
                     else if (u.role === 'engineering') roleBadge = '<span class="badge" style="background-color: #007bff; color: white;">工程部人員</span>';
-                    else if (u.role === 'assistant') roleBadge = '<span class="badge" style="background-color: #6f42c1; color: white;">物業助理</span>';
                     else if (u.role === 'cleaning') roleBadge = '<span class="badge" style="background-color: #17a2b8; color: white;">清潔部人員</span>';
+                    else if (u.role === 'assistant') roleBadge = '<span class="badge" style="background-color: #6f42c1; color: white;">物業助理</span>';
                     else roleBadge = '<span class="badge badge-info">一般巡邏員</span>';
 
                     const displayPassword = '<span style="color:#28a745; font-size:13px; font-weight:bold;">🔒 已加密</span>';
@@ -1150,7 +1237,7 @@
                     </tr>`;
                 }
                 
-                if (userCount === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">目前尚無人員資料，或載入中...</td></tr>'; }
+                if (userCount === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">找不到符合條件的人員資料。</td></tr>'; }
             } catch (err) { console.error("載入人員列表發生錯誤:", err); }
         };
 
@@ -1283,7 +1370,6 @@
                 if (!tbody) return;
                 tbody.innerHTML = '';
                 
-                // ➕ 加入搜尋過濾與排序邏輯
                 let keyword = document.getElementById('pointFilterKeyword') ? document.getElementById('pointFilterKeyword').value.toLowerCase().trim() : "";
                 let points = [...dbPoints];
                 
@@ -1302,7 +1388,6 @@
                     return 0;
                 });
 
-                // 更新標題箭頭顯示
                 if(document.getElementById('sort-point-floor')) document.getElementById('sort-point-floor').innerText = window.pointSortState.col === 'floor' ? (window.pointSortState.desc ? '▼' : '▲') : '';
                 if(document.getElementById('sort-point-name')) document.getElementById('sort-point-name').innerText = window.pointSortState.col === 'name' ? (window.pointSortState.desc ? '▼' : '▲') : '';
 
@@ -1427,7 +1512,6 @@
                 if (!tbody) return;
                 tbody.innerHTML = '';
                 
-                // ➕ 加入搜尋過濾與排序邏輯
                 let keyword = document.getElementById('routeFilterKeyword') ? document.getElementById('routeFilterKeyword').value.toLowerCase().trim() : "";
                 let routes = [...dbRoutes];
 
@@ -1449,7 +1533,6 @@
                     }
                 });
 
-                // 更新標題箭頭顯示
                 if(document.getElementById('sort-route-order')) document.getElementById('sort-route-order').innerText = window.routeSortState.col === 'order' ? (window.routeSortState.desc ? '▼' : '▲') : '';
                 if(document.getElementById('sort-route-name')) document.getElementById('sort-route-name').innerText = window.routeSortState.col === 'name' ? (window.routeSortState.desc ? '▼' : '▲') : '';
 
