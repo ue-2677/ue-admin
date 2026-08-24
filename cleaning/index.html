@@ -116,29 +116,32 @@
 
     <!-- 主要內容區塊 -->
     <div class="content-body">
+        <!-- 🌟 每日注意事項跑馬燈區塊 -->
+        <div id="dailyNoticeContainer" style="display:none; background:#fff3cd; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
+            <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+        
         <div class="card">
             <div class="card-header">
                 <h3>📋 待處理與完工紀錄</h3>
                 <button class="btn btn-warning" onclick="window.exportWorkOrders()">📤 備份工單紀錄</button>
             </div>
-    <!-- 👇 新增的篩選器面板 👇 -->
-    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
-                
+            
+            <!-- 👇 篩選器面板 👇 -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
                 <div style="flex: 1; min-width: 140px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
                     <input type="text" id="filterKeyword" class="form-control" placeholder="編號、地點、說明..." onkeyup="window.applyFilters()" style="padding: 8px;">
                 </div>
-                
                 <div style="flex: 1; min-width: 130px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
                     <input type="date" id="filterStartDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
                 </div>
-                
                 <div style="flex: 1; min-width: 130px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
                     <input type="date" id="filterEndDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
                 </div>
-                
                 <div style="flex: 1; min-width: 120px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 處理狀態</label>
                     <select id="filterStatus" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
@@ -147,12 +150,11 @@
                         <option value="已完成">✅ 已完成</option>
                     </select>
                 </div>
-                
                 <div style="display: flex; align-items: flex-end; margin-top: 18px;">
                     <button class="btn btn-secondary" onclick="window.clearFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
                 </div>
             </div>
-            <!-- 👆 篩選器面板結束 👆 -->
+            
             <table>
                 <thead>
                     <tr>
@@ -176,18 +178,15 @@
         <div class="modal-content">
             <h3 style="margin-top:0; color:var(--success);">✅ 完工回報 / 編輯報告</h3>
             <p style="font-size:13px; color:#666; margin-top:-5px;">可拍照留存處理結果或填寫備註說明。</p>
-
             <div class="form-group">
                 <label>📸 完工照片 (選填)</label>
                 <input type="file" id="completePhotoInput" accept="image/*" capture="environment" class="form-control" onchange="window.handleCompletePhotoUpload(event)">
                 <img id="completePhotoPreview" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:6px; border:1px solid #ccc;">
             </div>
-
             <div class="form-group">
                 <label>📝 處理備註 (選填)</label>
                 <textarea id="completeTextInput" rows="3" class="form-control" style="resize:vertical;" placeholder="例如：已清理完畢並放置防滑標示牌..."></textarea>
             </div>
-
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-success" style="flex: 1; padding: 12px; font-size: 15px;" onclick="window.submitComplete()">儲存資料</button>
                 <button class="btn btn-secondary" style="flex: 1; padding: 12px; font-size: 15px;" onclick="document.getElementById('completeModal').style.display='none'">取消</button>
@@ -208,23 +207,21 @@
             </div>
         </div>
     </div>
-    <!-- 👇 圖片點擊放大預覽視窗 👇 -->
+    
+    <!-- 圖片點擊放大預覽視窗 -->
     <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
         <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
         <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
         <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
     </div>
-    <!-- 👆 圖片預覽視窗結束 👆 -->
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc, getDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        
-        // 🚨 載入 Firebase Auth 引擎模組
         import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        // 🌟 1. 貼上你共用的 Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
             authDomain: "test-ue-app.firebaseapp.com",
@@ -236,8 +233,8 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app); // 啟動 Auth 引擎
-        const VIRTUAL_DOMAIN = "@patrol.com"; // 虛擬信箱網域
+        const auth = getAuth(app); 
+        const VIRTUAL_DOMAIN = "@patrol.com"; 
 
         let currentUser = null;
         let dbUsers = {};
@@ -245,9 +242,6 @@
         let currentCompleteOrderId = null;
         let currentCompletePhotoBase64 = "";
 
-        // ==========================================
-        // 🛡️ 資安防護：XSS HTML 字元過濾函數
-        // ==========================================
         window.escapeHTML = function(str) {
             if (str === null || str === undefined) return '';
             return String(str).replace(/[&<>'"]/g, function(tag) {
@@ -259,40 +253,76 @@
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
         // ==========================================
-        // 🔐 登入驗證與監聽 (Auth 核心)
+        // 🔐 登入驗證與監聽 (單一設備防護版)
         // ==========================================
+        window.isSystemInitialized = false; 
+        let userDocListener = null; 
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const username = user.email.replace(VIRTUAL_DOMAIN, '');
-                const userDoc = await getDoc(doc(db, "users", username));
                 
-                if (userDoc.exists()) {
-                    currentUser = { username: username, ...userDoc.data() };
-                    
-                    // 防呆檢查：只有這三種身分可以進清潔部後台
-                    if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'cleaning') {
-                        alert("權限不足，將返回登入頁！");
+                if (userDocListener) userDocListener(); 
+
+                userDocListener = onSnapshot(doc(db, "users", username), (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        
+                        // 🛡️ 密碼被重設防護
+                        if (data.authEmail && data.authEmail !== user.email) {
+                            if (userDocListener) userDocListener();
+                            auth.signOut();
+                            alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請使用新密碼重新登入！");
+                            window.location.replace('../');
+                            return;
+                        }
+
+                        // 🛡️ 單一設備登入防護
+                        const dbSessionId = data.currentSessionId;
+                        const myLocalSessionId = localStorage.getItem('patrolSessionId');
+                        if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
+                            if (userDocListener) userDocListener();
+                            auth.signOut();
+                            localStorage.removeItem('patrolSessionId');
+                            alert("⚠️ 您的帳號已在其他設備或瀏覽器登入，本機已被強制登出！");
+                            window.location.replace('../');
+                            return;
+                        }
+
+                        currentUser = { username: username, ...data };
+                        
+                        // ⚠️ 防呆檢查：只允許管理員與【清潔部】進入
+                        if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'cleaning') {
+                            alert("權限不足，將返回登入頁！");
+                            auth.signOut();
+                            window.location.replace('../');
+                            return;
+                        }
+                        
+                        if (!window.isSystemInitialized) {
+                            window.isSystemInitialized = true;
+                            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
+                            initRealtimeListeners();
+                        }
+                    } else {
+                        if (userDocListener) userDocListener();
                         auth.signOut();
-                        window.location.replace('index.html');
-                        return;
+                        window.location.replace('../');
                     }
-                    
-                    document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
-                    initRealtimeListeners();
-                } else {
-                    auth.signOut();
-                    window.location.replace('index.html');
-                }
+                });
             } else {
-                window.location.replace('index.html');
+                if (userDocListener) { userDocListener(); userDocListener = null; }
+                window.isSystemInitialized = false;
+                window.location.replace('../');
             }
         });
 
         window.performLogout = async function() {
             if(confirm("確定要登出系統嗎？")) { 
                 await auth.signOut();
-                localStorage.removeItem('cloudCurrentUser'); // 清除舊版殘留
-                window.location.replace('index.html'); 
+                localStorage.removeItem('cloudCurrentUser'); 
+                localStorage.removeItem('patrolSessionId'); 
+                window.location.replace('../'); 
             }
         };
 
@@ -302,15 +332,43 @@
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
             });
 
+            // 🌟 這裡過濾條件已設為 "清潔部"
             const q = query(collection(db, "workOrders"), where("department", "==", "清潔部"));
             onSnapshot(q, (snapshot) => {
                 dbWorkOrders = [];
                 snapshot.forEach(doc => { dbWorkOrders.push({ id: doc.id, ...doc.data() }); });
                 window.renderWorkOrders();
             });
+
+            // 🌟 監聽特別事項通知
+            onSnapshot(collection(db, "notices"), (snapshot) => {
+                const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                const noticeList = document.getElementById('dailyNoticeList');
+                const container = document.getElementById('dailyNoticeContainer');
+                noticeList.innerHTML = '';
+                let hasNotice = false;
+                
+                const myDeptName = "清潔部"; 
+
+                snapshot.forEach(docSnap => {
+                    const notice = docSnap.data();
+                    const sDate = notice.startDate.replace(/-/g, '');
+                    const eDate = notice.endDate.replace(/-/g, '');
+                    
+                    if (today >= sDate && today <= eDate && (notice.departments.includes(myDeptName) || notice.departments.includes('全體'))) {
+                        hasNotice = true;
+                        noticeList.innerHTML += `<div style="background: white; padding: 10px; border-radius: 6px; font-size: 14px; color: #333; border: 1px solid #ffeeba;">
+                            <strong style="color:var(--danger);">[重要]</strong> ${window.escapeHTML(notice.text)}
+                        </div>`;
+                    }
+                });
+
+                if (hasNotice) { container.style.display = 'block'; } 
+                else { container.style.display = 'none'; }
+            });
         }
 
-       // --- 篩選器觸發功能 ---
+        // --- 篩選器與表格渲染 ---
         window.applyFilters = function() { window.renderWorkOrders(); };
         window.clearFilters = function() {
             document.getElementById('filterKeyword').value = '';
@@ -478,7 +536,6 @@
             } catch(e) { alert("狀態更新失敗，請檢查網路連線！"); }
         };
 
-        // --- 備份與刪除 (含稽核軌跡) ---
         window.exportWorkOrders = function() {
             const dataStr = JSON.stringify(dbWorkOrders, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
@@ -542,7 +599,7 @@
                 document.getElementById('selfPasswordModal').style.display = 'none';
                 alert("✅ 密碼修改成功！基於安全機制，請使用新密碼重新登入。");
                 await auth.signOut();
-                window.location.replace('index.html'); 
+                window.location.replace('../'); 
             } catch(e) { 
                 console.error(e);
                 if (e.code === 'auth/invalid-credential') alert("❌ 舊密碼輸入錯誤！");
