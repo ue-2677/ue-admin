@@ -375,10 +375,11 @@
     </div> <!-- main-content end -->
 
     <!-- ================== 彈窗 Modal 區塊 ================== -->
-    <!-- 新增特別事項通知 -->
+    <!-- 新增與編輯特別事項通知 -->
     <div id="noticeModal" class="modal">
         <div class="modal-content" style="width:500px;">
-            <h3 style="color:var(--primary); margin-top:0;">📢 發布特別事項通知</h3>
+            <h3 id="noticeModalTitle" style="color:var(--primary); margin-top:0;">📢 發布特別事項通知</h3>
+            <input type="hidden" id="editNoticeId">
             <div class="form-group">
                 <label>通知內容</label>
                 <textarea id="noticeTextInput" class="form-control" rows="3" placeholder="例如：明日A棟將停水，請注意水塔儲水量..."></textarea>
@@ -737,26 +738,59 @@
                     <td><strong>${window.escapeHTML(notice.text)}</strong><br><span style="font-size:11px; color:#888;">發布者: ${notice.createdBy}</span></td>
                     <td style="font-family:monospace; font-size:13px;">${notice.startDate} ~ ${notice.endDate}<br>${statusTag}</td>
                     <td>${depts}</td>
-                    <td><button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteNotice('${notice.id}')">🗑️ 刪除</button></td>
+                    <td>
+                        <button class="btn btn-warning" style="padding: 4px 8px; font-size:12px; margin-bottom:4px;" onclick="window.editNotice('${notice.id}')">✏️ 編輯</button>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteNotice('${notice.id}')">🗑️ 刪除</button>
+                    </td>
                 </tr>`;
             });
 
             if (count === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">目前無符合條件的通知</td></tr>'; }
         };
 
-        window.openNoticeModal = function() {
-            document.getElementById('noticeTextInput').value = '';
-            const today = new Date().toISOString().slice(0, 10);
-            document.getElementById('noticeStartDate').value = today;
-            document.getElementById('noticeEndDate').value = today;
-            document.querySelectorAll('.notice-dept-chk').forEach(c => c.checked = (c.value === '工程部' || c.value === '清潔部'));
+       window.openNoticeModal = function(noticeId = null) {
+            const title = document.getElementById('noticeModalTitle');
+            const editId = document.getElementById('editNoticeId');
+            
+            if (noticeId) {
+                // 進入編輯模式，從本地陣列抓取資料填入
+                const notice = dbNotices.find(n => n.id === noticeId);
+                if (!notice) return;
+                
+                title.innerText = "✏️ 編輯特別事項通知";
+                editId.value = noticeId;
+                document.getElementById('noticeTextInput').value = notice.text;
+                document.getElementById('noticeStartDate').value = notice.startDate;
+                document.getElementById('noticeEndDate').value = notice.endDate;
+                
+                // 勾選原有的發布部門
+                document.querySelectorAll('.notice-dept-chk').forEach(c => {
+                    c.checked = notice.departments.includes(c.value);
+                });
+            } else {
+                // 進入新增模式，清空欄位
+                title.innerText = "📢 發布特別事項通知";
+                editId.value = "";
+                document.getElementById('noticeTextInput').value = '';
+                const today = new Date().toISOString().slice(0, 10);
+                document.getElementById('noticeStartDate').value = today;
+                document.getElementById('noticeEndDate').value = today;
+                document.querySelectorAll('.notice-dept-chk').forEach(c => c.checked = (c.value === '工程部' || c.value === '清潔部'));
+            }
+            
             document.getElementById('noticeModal').classList.add('active');
+        };
+
+        // 綁定給編輯按鈕的專屬函數
+        window.editNotice = function(id) {
+            window.openNoticeModal(id);
         };
 
         window.saveNotice = async function() {
             const text = document.getElementById('noticeTextInput').value.trim();
             const sDate = document.getElementById('noticeStartDate').value;
             const eDate = document.getElementById('noticeEndDate').value;
+            const editId = document.getElementById('editNoticeId').value;
             let targetDepts = [];
             document.querySelectorAll('.notice-dept-chk:checked').forEach(c => targetDepts.push(c.value));
 
@@ -765,15 +799,35 @@
             if (targetDepts.length === 0) { alert("至少選擇一個發布部門！"); return; }
 
             try {
-                await addDoc(collection(db, "notices"), {
-                    text: text, startDate: sDate, endDate: eDate, departments: targetDepts,
-                    createdBy: currentUser.name, createdAt: Date.now()
-                });
+                if (editId) {
+                    // 更新既有通知
+                    await updateDoc(doc(db, "notices", editId), {
+                        text: text, 
+                        startDate: sDate, 
+                        endDate: eDate, 
+                        departments: targetDepts,
+                        updatedBy: currentUser.name, 
+                        updatedAt: Date.now()
+                    });
+                    alert("✅ 通知更新成功！");
+                } else {
+                    // 新增一筆通知
+                    await addDoc(collection(db, "notices"), {
+                        text: text, 
+                        startDate: sDate, 
+                        endDate: eDate, 
+                        departments: targetDepts,
+                        createdBy: currentUser.name, 
+                        createdAt: Date.now()
+                    });
+                    alert("✅ 通知發布成功！");
+                }
                 document.getElementById('noticeModal').classList.remove('active');
-                alert("✅ 通知發布成功！");
-            } catch(e) { alert("發布失敗，請檢查網路。"); }
+            } catch(e) { 
+                alert("儲存失敗，請檢查網路。"); 
+            }
         };
-
+        
         window.deleteNotice = async function(id) {
             if(confirm("確定要刪除這條通知嗎？")) await deleteDoc(doc(db, "notices", id));
         };
