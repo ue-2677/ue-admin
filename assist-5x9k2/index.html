@@ -15,19 +15,42 @@
         .form-control { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
         .btn { width: 100%; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; color: white; transition: 0.2s; margin-top: 10px; }
         .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
         .btn-danger { background: var(--danger); }
+        .btn-secondary { background: #6c757d; color: white; }
         .btn:hover { opacity: 0.9; }
         .msg-box { margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; display: none; text-align: center; }
+        
+        /* 🌟 個人選單與下拉樣式 */
+        .profile-trigger { cursor: pointer; user-select: none; position: relative; z-index: 10; display: inline-flex; align-items: center; background: rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 8px; color: white; font-weight: bold; font-size: 14px; transition: 0.2s; border: 1px solid rgba(255,255,255,0.3); }
+        .profile-trigger:active { background: rgba(255,255,255,0.3); }
+        .profile-dropdown-content { display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; width: 140px; z-index: 1000; border: 1px solid #eee; }
+        .profile-dropdown-content.active { display: block; animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 🌟 彈窗與浮動按鈕樣式 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .fab-back-admin {
+            position: fixed; bottom: 20px; left: 20px; width: 55px; height: 55px;
+            background-color: #6c757d; color: white; border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;
+            z-index: 1000; border: none; transition: transform 0.2s; text-decoration: none;
+        }
+        .fab-back-admin:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>📋 物業助理跨部門派單系統</h1>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <span id="currentUserDisplay" style="font-size: 14px;"></span>
-            <!-- 🌟 補上登出按鈕 -->
-            <button class="btn btn-danger" style="margin: 0; padding: 6px 12px; font-size: 13px; width: auto;" onclick="window.performLogout()">🚪 登出</button>
+        <div style="position: relative;">
+            <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)">👤 載入中 ▼</div>
+            <div id="profileMenu" class="profile-dropdown-content">
+                <button class="btn btn-warning" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 8px; margin-top:0;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
+                <button class="btn btn-danger" style="width: 100%; padding: 10px; font-size: 14px; margin: 0;" onclick="window.performLogout()">🚪 登出系統</button>
+            </div>
         </div>
     </div>
 
@@ -47,7 +70,6 @@
             </select>
         </div>
 
-        <!-- 🌟 當選擇管理部時才會出現的隱藏選單 -->
         <div class="form-group" id="managementCategoryGroup" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
             <label style="color: var(--primary);">📍 選擇管理部需求類別</label>
             <select id="managementCategory" class="form-control">
@@ -77,11 +99,27 @@
         <div id="statusMsg" class="msg-box"></div>
     </div>
 
+    <!-- 管理員返回後台浮動按鈕 -->
+    <button id="adminBackBtn" class="fab-back-admin" onclick="window.location.replace('../admin_dashboard/')">⬅️</button>
+
+    <!-- 更改密碼彈窗 -->
+    <div id="selfPasswordModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; padding: 25px;">
+            <h3 style="margin-top:0; color:#1a73e8;">🔑 更改個人密碼</h3>
+            <div class="form-group"><label>目前的舊密碼</label><input type="password" id="selfOldPassword" class="form-control"></div>
+            <div class="form-group"><label>設定新密碼</label><input type="password" id="selfNewPassword" class="form-control"></div>
+            <div class="form-group"><label>再次確認新密碼</label><input type="password" id="selfConfirmPassword" class="form-control"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.saveSelfPassword()">確認更新</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('selfPasswordModal').style.display='none'">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        // 🌟 補上 signOut 方法
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
@@ -106,21 +144,14 @@
             });
         };
         
-        // ==========================================
-        // 🔐 登入驗證與監聽 (單一設備防護 + 助理權限版)
-        // ==========================================
         let userDocListener = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 let username = user.email.replace("@patrol.com", '');
-                
-                // 🔍 替身反查機制：這段非常重要！讓系統能認得管理員新建的帳號
                 const q = query(collection(db, "users"), where("authEmail", "==", user.email));
                 const snap = await getDocs(q);
-                if (!snap.empty) {
-                    username = snap.docs[0].id; 
-                }
+                if (!snap.empty) { username = snap.docs[0].id; }
 
                 if (userDocListener) userDocListener();
                 
@@ -128,7 +159,6 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
-                        // 🛡️ 密碼被重設防護
                         if (data.authEmail && data.authEmail !== user.email) {
                             if (userDocListener) userDocListener();
                             auth.signOut();
@@ -157,7 +187,13 @@
                             return;
                         }
 
-                        document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
+                        document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} ▼`;
+                        
+                        if (currentUser.role === 'admin' || currentUser.role === 'sub_admin') {
+                            const backBtn = document.getElementById('adminBackBtn');
+                            if (backBtn) backBtn.style.display = 'flex';
+                        }
+                        
                         window.initNoticesListener();
                         
                     } else {
@@ -180,7 +216,6 @@
             }
         };
 
-        // 🌟 接收通知的專屬功能
         window.initNoticesListener = function() {
             onSnapshot(collection(db, "notices"), (snapshot) => {
                 const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -194,7 +229,6 @@
                     const sDate = notice.startDate.replace(/-/g, '');
                     const eDate = notice.endDate.replace(/-/g, '');
 
-                    // 判斷日期是否有效，且發布對象包含「物業助理」或「全體」
                     if (today >= sDate && today <= eDate && (notice.departments.includes('物業助理') || notice.departments.includes('全體'))) {
                         hasNotice = true;
                         noticeList.innerHTML += `<div style="background: white; padding: 10px; border-radius: 6px; font-size: 14px; color: #333; border: 1px solid #ffeeba;">
@@ -249,7 +283,7 @@
             else if (dept === '管理部') {
                 prefix = 'MGT';
                 const cat = document.getElementById('managementCategory').value;
-                descText = `[${cat}] ${descText}`; // 將管理部特殊需求標籤加在文字最前面
+                descText = `[${cat}] ${descText}`;
             }
 
             const btn = document.getElementById('submitBtn');
@@ -272,7 +306,6 @@
                 msg.style.display = 'block'; msg.style.background = '#d4edda'; msg.style.color = '#155724';
                 msg.innerText = `✅ 派單成功！單號：${refNumber}`;
                 
-                // 兩秒後清空表單
                 setTimeout(() => {
                     document.getElementById('dispatchLocation').value = '';
                     document.getElementById('dispatchText').value = '';
@@ -286,6 +319,52 @@
             } catch (e) { 
                 alert("派單失敗，請檢查網路連線。"); 
                 btn.disabled = false; btn.innerText = "🚀 立即派發工單";
+            }
+        };
+
+        // --- 個人下拉選單邏輯 ---
+        window.toggleProfileMenu = function(e) {
+            e.stopPropagation();
+            document.getElementById('profileMenu').classList.toggle('active');
+        };
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.profile-trigger')) {
+                const menu = document.getElementById('profileMenu');
+                if (menu && menu.classList.contains('active')) menu.classList.remove('active');
+            }
+        });
+
+        // --- 更改密碼邏輯 ---
+        window.openSelfPasswordModal = function() {
+            document.getElementById('profileMenu').classList.remove('active');
+            document.getElementById('selfOldPassword').value = ''; 
+            document.getElementById('selfNewPassword').value = '';
+            document.getElementById('selfConfirmPassword').value = ''; 
+            document.getElementById('selfPasswordModal').style.display = 'flex';
+        };
+
+        window.saveSelfPassword = async function() {
+            const oldPw = document.getElementById('selfOldPassword').value.trim();
+            const newPw = document.getElementById('selfNewPassword').value.trim();
+            const confPw = document.getElementById('selfConfirmPassword').value.trim();
+            
+            if (!oldPw || !newPw || !confPw) { alert("請填寫所有密碼欄位！"); return; }
+            if (newPw !== confPw) { alert("新密碼不相符！"); return; }
+            if (newPw.length < 6) { alert("新密碼至少需要 6 個字元！"); return; }
+            
+            try {
+                const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPw);
+                await reauthenticateWithCredential(auth.currentUser, credential);
+                await updatePassword(auth.currentUser, newPw);
+                
+                document.getElementById('selfPasswordModal').style.display = 'none';
+                alert("✅ 密碼修改成功！請使用新密碼重新登入。");
+                await auth.signOut();
+                window.location.replace('../'); 
+            } catch(e) { 
+                console.error(e);
+                if (e.code === 'auth/invalid-credential') alert("❌ 舊密碼輸入錯誤！");
+                else alert("❌ 更新失敗：" + e.message); 
             }
         };
     </script>
