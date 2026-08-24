@@ -413,6 +413,9 @@
         // ==========================================
         // 🔐 登入驗證與監聽 (防護升級版)
         // ==========================================
+        window.isSystemInitialized = false; // 控制 UI 避免重複繪製
+        let userDocListener = null; // 儲存監聽器
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 let username = user.email.replace(VIRTUAL_DOMAIN, '');
@@ -424,42 +427,63 @@
                     username = snap.docs[0].id; // 找回原本真實的帳號名稱
                 }
 
-                const userDoc = await getDoc(doc(db, "users", username));
-                
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    
-                    // 🛡️ 舊憑證防堵機制：如果這組帳號已被重設密碼（有新替身），但嘗試用舊的 Auth 信箱登入，直接踢除
-                    if (data.authEmail && data.authEmail !== user.email) {
-                        auth.signOut();
-                        alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請使用新密碼重新登入！");
-                        window.location.replace('index.html');
-                        return;
-                    }
+                if (userDocListener) userDocListener(); // 清除舊監聽
 
-                    currentUser = { username: username, ...data };
-                    
-                    if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin') {
-                        alert("權限不足，將返回登入頁！");
+                // 🌟 改用 onSnapshot 即時盯著這個帳號的變化 (包含 Session ID)
+                userDocListener = onSnapshot(doc(db, "users", username), (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        
+                        // 🛡️ 舊憑證防堵機制：密碼被重設時踢出
+                        if (data.authEmail && data.authEmail !== user.email) {
+                            if (userDocListener) userDocListener();
+                            auth.signOut();
+                            alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請使用新密碼重新登入！");
+                            window.location.replace('index.html');
+                            return;
+                        }
+
+                        // 🛡️ 單一設備防護機制：雲端鑰匙與本機鑰匙不符時踢出
+                        const dbSessionId = data.currentSessionId;
+                        const myLocalSessionId = localStorage.getItem('patrolSessionId');
+                        if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
+                            if (userDocListener) userDocListener();
+                            auth.signOut();
+                            localStorage.removeItem('patrolSessionId');
+                            alert("⚠️ 您的帳號已在其他設備或瀏覽器登入，本機已被強制登出！");
+                            window.location.replace('index.html');
+                            return;
+                        }
+
+                        currentUser = { username: username, ...data };
+                        
+                        if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin') {
+                            alert("權限不足，將返回登入頁！");
+                            auth.signOut();
+                            window.location.replace('index.html');
+                            return;
+                        }
+                        
+                        // 確保 UI 只會初始化一次，不會因為雲端資料變化而閃爍
+                        if (!window.isSystemInitialized) {
+                            window.isSystemInitialized = true;
+                            document.getElementById('sidebarContainer').style.display = 'flex';
+                            document.getElementById('mainContentContainer').style.display = 'flex';
+                            
+                            let roleName = (currentUser.role === 'admin') ? '最高管理員' : '二級管理員';
+                            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (${roleName})`;
+                            
+                            initRealtimeListeners();
+                        }
+                    } else {
+                        if (userDocListener) userDocListener();
                         auth.signOut();
                         window.location.replace('index.html');
-                        return;
                     }
-                    
-                    // 登入驗證且身分核准成功後，才顯示後台畫面
-                    document.getElementById('sidebarContainer').style.display = 'flex';
-                    document.getElementById('mainContentContainer').style.display = 'flex';
-                    
-                    let roleName = (currentUser.role === 'admin') ? '最高管理員' : '二級管理員';
-                    document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (${roleName})`;
-                    
-                    initRealtimeListeners();
-                } else {
-                    auth.signOut();
-                    window.location.replace('index.html');
-                }
+                });
             } else {
-                // 沒有登入狀態，直接踢回 index.html
+                if (userDocListener) { userDocListener(); userDocListener = null; }
+                window.isSystemInitialized = false;
                 window.location.replace('index.html');
             }
         });
@@ -468,6 +492,7 @@
             if(confirm("確定要登出系統嗎？")) { 
                 await auth.signOut();
                 localStorage.removeItem('cloudCurrentUser'); 
+                localStorage.removeItem('patrolSessionId'); // 🌟 登出時確實銷毀鑰匙
                 window.location.replace('index.html');
             }
         };
