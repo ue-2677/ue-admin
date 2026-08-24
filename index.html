@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大樓物業管理系統 - 統一後台登入</title>
+    <title>大樓物業管理系統 - 後台登入</title>
     <style>
         :root { --primary: #1a73e8; --bg: #f4f6f9; --text: #333; }
         body { 
@@ -76,16 +76,16 @@
         <div id="statusMsg" class="loader">連線初始化中...</div>
     </div>
 
-    <!-- ============================================== -->
-    <!-- Firebase SDK 與企業級身分驗證邏輯 -->
+
+   <!-- ============================================== -->
+    <!-- Firebase SDK 與企業級身分驗證邏輯 (單一設備防護版) -->
     <!-- ============================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        // 🚨 匯入 getAuth, signInWithEmailAndPassword, onAuthStateChanged (登入引擎三劍客)
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        // 匯入 getFirestore (查詢權限用)
-        import { getFirestore, doc, getDoc } 
+        // 🚨 加上 updateDoc，用來把新鑰匙寫入雲端
+        import { getFirestore, doc, getDoc, updateDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // 🌟 貼上共用的 Firebase Config
@@ -101,21 +101,43 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        // 定義你們大樓的「虛擬信箱網域」
         const VIRTUAL_DOMAIN = "@patrol.com";
 
-        // 監聽登入狀態 (如果已經有合法的 Token，就自動查身分並跳轉)
+        // 🌟 防衝突鎖：讓登入時的瞬間更新不會跟監聽器打架
+        let isLoggingIn = false;
+
+        // 監聽登入狀態
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                document.getElementById('statusMsg').innerText = "⏳ 驗證成功，正在讀取權限...";
-                // 從 Firestore 查出這個人真正的權限 (role)
-                const userDoc = await getDoc(doc(db, "users", user.email.replace(VIRTUAL_DOMAIN, '')));
-                if (userDoc.exists()) {
-                    const role = userDoc.data().role;
-                    autoRedirect(role);
-                } else {
-                    document.getElementById('statusMsg').innerText = "❌ 權限異常，請聯絡管理員";
+                // 如果正在執行登入流程，交給 processLogin 處理，這邊先不介入
+                if (isLoggingIn) return; 
+
+                document.getElementById('statusMsg').innerText = "⏳ 驗證成功，正在檢查設備授權...";
+                const username = user.email.replace(VIRTUAL_DOMAIN, '');
+                
+                try {
+                    const userDoc = await getDoc(doc(db, "users", username));
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        const dbSessionId = data.currentSessionId;
+                        const myLocalSessionId = localStorage.getItem('patrolSessionId');
+
+                        // 🛡️ 核心防護：檢查雲端鑰匙是否跟本機鑰匙一致
+                        if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
+                            auth.signOut();
+                            localStorage.removeItem('patrolSessionId');
+                            document.getElementById('statusMsg').innerText = "⚠️ 帳號已在其他設備登入";
+                            alert("⚠️ 您的帳號已在其他設備或瀏覽器登入，本機已被強制登出！");
+                            return;
+                        }
+
+                        autoRedirect(data.role);
+                    } else {
+                        document.getElementById('statusMsg').innerText = "❌ 權限異常，請聯絡管理員";
+                        auth.signOut();
+                    }
+                } catch (err) {
+                    console.error("驗證失敗:", err);
                     auth.signOut();
                 }
             } else {
@@ -123,12 +145,10 @@
             }
         });
 
-        // 按 Enter 鍵直接登入
         window.handleEnter = function(e) {
             if (e.key === 'Enter') window.processLogin();
         };
 
-        // 驗證帳號密碼
         window.processLogin = async function() {
             const un = document.getElementById('inputUsername').value.trim().toLowerCase();
             const pw = document.getElementById('inputPassword').value.trim();
@@ -140,20 +160,39 @@
             btn.disabled = true;
             btn.innerText = "驗證中...";
             msg.innerText = "🔐 正在與 Firebase 伺服器進行安全連線...";
-
-            // 🎩 魔術發生地：自動將短帳號補齊成虛擬信箱格式
+            
+            // 開啟防衝突鎖
+            isLoggingIn = true;
             const virtualEmail = `${un}${VIRTUAL_DOMAIN}`;
 
             try {
-                // 呼叫 Firebase 伺服器進行加密驗證
+                // 1. 先登入 Firebase
                 await signInWithEmailAndPassword(auth, virtualEmail, pw);
-                // 成功的話，上面的 onAuthStateChanged 會接手處理後續跳轉
+                
+                // 2. 產生全新 Session ID 鑰匙
+                const newSessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+                
+                // 3. 將新鑰匙寫入雲端 (這個動作會立刻把其他正在用這個帳號的設備踢下線)
+                await updateDoc(doc(db, "users", un), { currentSessionId: newSessionId });
+                
+                // 4. 將新鑰匙存入本機，證明自己是最新登入的合法設備
+                localStorage.setItem('patrolSessionId', newSessionId);
+
+                // 5. 取得權限並跳轉
+                const userDoc = await getDoc(doc(db, "users", un));
+                if (userDoc.exists()) {
+                    autoRedirect(userDoc.data().role);
+                } else {
+                    throw new Error("無權限資料");
+                }
+
             } catch (error) {
+                // 解開防衝突鎖
+                isLoggingIn = false;
                 console.error("登入錯誤代碼:", error.code);
                 btn.disabled = false;
                 btn.innerText = "登 入 系 統";
                 
-                // 判斷常見錯誤
                 if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                     alert("❌ 帳號或密碼錯誤！\n(請確認該帳號已在管理後台建立)");
                 } else {
@@ -163,9 +202,7 @@
             }
         };
 
-        // 🚨 核心分流樞紐 (Routing)
         function autoRedirect(role) {
-            // 防呆：禁止一般巡邏保全 (user) 登入這個後台入口
             if (role === 'user') {
                 alert("⚠️ 權限不足！一般巡邏員請使用「手機端專屬 APP」網址登入。");
                 auth.signOut();
