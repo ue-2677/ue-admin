@@ -242,7 +242,7 @@
                     if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'engineering') {
                         alert("權限不足，將返回登入頁！");
                         auth.signOut();
-                        window.location.replace('index.html');
+                        window.location.replace('../index.html');
                         return;
                     }
                     
@@ -250,10 +250,10 @@
                     initRealtimeListeners();
                 } else {
                     auth.signOut();
-                    window.location.replace('index.html');
+                    window.location.replace('../index.html');
                 }
             } else {
-                window.location.replace('index.html');
+                window.location.replace('../index.html');
             }
         });
 
@@ -261,7 +261,7 @@
             if(confirm("確定要登出系統嗎？")) { 
                 await auth.signOut();
                 localStorage.removeItem('cloudCurrentUser'); // 清除舊版殘留
-                window.location.replace('index.html'); 
+                window.location.replace('../index.html'); 
             }
         };
 
@@ -540,7 +540,7 @@
                 document.getElementById('selfPasswordModal').style.display = 'none';
                 alert("✅ 密碼修改成功！基於安全機制，請使用新密碼重新登入。");
                 await auth.signOut();
-                window.location.replace('index.html'); 
+                window.location.replace('../index.html'); 
             } catch(e) { 
                 console.error(e);
                 if (e.code === 'auth/invalid-credential') alert("❌ 舊密碼輸入錯誤！");
