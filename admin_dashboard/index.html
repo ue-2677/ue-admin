@@ -569,6 +569,15 @@
             });
         };
 
+        // 🌟 核心優化：統一本地時間處理，避免使用 toISOString() 造成的 UTC 時區偏差
+        window.getLocalDateStr = function(withDash = false) {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return withDash ? `${y}-${m}-${day}` : `${y}${m}${day}`;
+        };
+
         // 🌟 個人選單關閉邏輯
         window.toggleProfileMenu = function(e) {
             e.stopPropagation();
@@ -632,8 +641,8 @@
                             document.getElementById('sidebarContainer').style.display = 'flex';
                             document.getElementById('mainContentContainer').style.display = 'flex';
                             
-                            // 🌟 修正：只顯示名字，隱藏後面的權限等級
-                            document.getElementById('currentUserDisplay').innerHTML = `👤 ${currentUser.name} ▼`;
+                            let roleName = (currentUser.role === 'admin') ? '最高管理員' : '二級管理員';
+                            document.getElementById('currentUserDisplay').innerHTML = `👤 ${currentUser.name} (${roleName}) ▼`;
                             
                             initRealtimeListeners();
 
@@ -719,7 +728,7 @@
             const tbody = document.getElementById('noticesTableBody'); tbody.innerHTML = '';
             const statusFilter = document.getElementById('noticeFilterStatus') ? document.getElementById('noticeFilterStatus').value : 'all';
             
-            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const today = window.getLocalDateStr(false);
             let count = 0;
 
             dbNotices.forEach(notice => {
@@ -772,7 +781,7 @@
                 title.innerText = "📢 發布特別事項通知";
                 editId.value = "";
                 document.getElementById('noticeTextInput').value = '';
-                const today = new Date().toISOString().slice(0, 10);
+                const today = window.getLocalDateStr(true);
                 document.getElementById('noticeStartDate').value = today;
                 document.getElementById('noticeEndDate').value = today;
                 document.querySelectorAll('.notice-dept-chk').forEach(c => c.checked = (c.value === '工程部' || c.value === '清潔部'));
@@ -1222,7 +1231,7 @@
             if (!descText && !window.currentDispatchData.photo) { alert("請輸入工單說明或提供照片！"); return; }
         
             const prefix = dept === '工程部' ? 'ENG' : 'CLN';
-            const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+            const dateStr = window.getLocalDateStr(false);
         
             try {
                 const q = query(collection(db, "workOrders"), where("department", "==", dept));
@@ -1531,7 +1540,7 @@
             const blob = new Blob([routesData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
-            a.download = `雲端巡邏路線備份_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`;
+            a.download = `雲端巡邏路線備份_${window.getLocalDateStr(false)}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         };
         window.handleImportRoutes = function(event) {
