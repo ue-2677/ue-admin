@@ -71,7 +71,6 @@
         /* 🌟 手機版樣式 */
         .mobile-bottom-nav { display: none; }
         
-        
         @media (max-width: 768px) {
             .sidebar { display: none !important; }
             .topbar { padding: 15px; }
@@ -946,7 +945,7 @@
             }
 
             filteredTasks.forEach(task => {
-                const skippedInTask = (task.skippedPoints || []).length;
+                const skippedInTask = [...new Set(task.skippedPoints || [])].length;
                 const incidentsInTask = (task.incidents || []).length;
 
                 let alertBadge = '';
@@ -969,7 +968,7 @@
                     <td><strong>${window.escapeHTML(task.routeName)}</strong></td>
                     <td>${window.escapeHTML(task.guardName || '未登記')}</td>
                     <td style="font-family:monospace; color:#555;">${actualStartTimeStr}</td>
-                    <td>${task.currentPointIndex || 0} / ${(task.points || []).length}</td>
+                    <td>${Math.min(task.currentPointIndex || 0, (task.points || []).length)} / ${(task.points || []).length}</td>
                     <td>${alertBadge}</td>
                     <td>${statusBadge}</td>
                     <td><button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;" onclick="window.viewTaskDetail('${task.id}')">🔍 查看報表</button></td>
