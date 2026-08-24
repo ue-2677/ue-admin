@@ -209,13 +209,16 @@
                 return;
             }
 
-            // 👇 這裡非常重要！必須是「資料夾名稱 / index.html」
+            // 🌟 修正：改成資料夾路徑，解決 404 找不到網頁的問題
             if (role === 'admin' || role === 'sub_admin') {
                 window.location.replace('admin_dashboard/index.html');
             } else if (role === 'engineering') {
                 window.location.replace('engineering/index.html');
             } else if (role === 'cleaning') {
                 window.location.replace('cleaning/index.html');
+            } else if (role === 'assistant') {
+                // 🌟 新增：物業助理專屬的跳轉路徑
+                window.location.replace('assist-5x9k2/index.html');
             } else {
                 alert("未知的權限設定，請聯絡管理員。");
                 auth.signOut();
