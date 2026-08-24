@@ -25,7 +25,16 @@
         <h1>📋 物業助理跨部門派單系統</h1>
         <span id="currentUserDisplay" style="font-size: 14px;"></span>
     </div>
+    <div class="header">
+        <h1>📋 物業助理跨部門派單系統</h1>
+        <span id="currentUserDisplay" style="font-size: 14px;"></span>
+    </div>
 
+    <!-- 🌟 每日注意事項跑馬燈區塊 -->
+    <div id="dailyNoticeContainer" style="display:none; width: 100%; max-width: 600px; background:#fff3cd; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box;">
+        <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
+        <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    </div>
     <div class="card">
         <div class="form-group">
             <label>1. 選擇要派發的部門</label>
@@ -68,9 +77,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-
+        
         const firebaseConfig = {
             apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
             authDomain: "test-ue-app.firebaseapp.com",
@@ -85,11 +94,18 @@
         const auth = getAuth(app);
         let currentUser = null;
         let currentPhotoBase64 = "";
+        window.escapeHTML = function(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>'"]/g, function(tag) {
+                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
+                return charsToReplace[tag] || tag;
+            });
+        };
+        
 // ==========================================
         // 🔐 登入驗證與監聽 (單一設備防護 + 助理權限版)
         // ==========================================
         let userDocListener = null;
-        // 權限驗證 (允許 admin, sub_admin, engineering, cleaning 登入使用)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const username = user.email.replace("@patrol.com", '');
@@ -99,7 +115,6 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
-                        // 🛡️ 單一設備登入防護 (踢除舊設備機制)
                         const dbSessionId = data.currentSessionId;
                         const myLocalSessionId = localStorage.getItem('patrolSessionId');
                         if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
@@ -113,7 +128,6 @@
 
                         currentUser = { username: username, ...data };
                         
-                        // 🌟 權限驗證：只允許 管理員、副管理員、以及【物業助理】進入
                         if (!['admin', 'sub_admin', 'assistant'].includes(currentUser.role)) {
                             alert("權限不足，將返回登入頁！");
                             auth.signOut();
@@ -122,6 +136,10 @@
                         }
 
                         document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (物業助理)`;
+                        
+                        // 🌟 登入成功後，啟動通知監聽
+                        window.initNoticesListener();
+                        
                     } else {
                         if (userDocListener) userDocListener();
                         auth.signOut();
@@ -132,6 +150,35 @@
                 window.location.replace('../index.html');
             }
         });
+
+        // 🌟 接收通知的專屬功能
+        window.initNoticesListener = function() {
+            onSnapshot(collection(db, "notices"), (snapshot) => {
+                const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                const noticeList = document.getElementById('dailyNoticeList');
+                const container = document.getElementById('dailyNoticeContainer');
+                noticeList.innerHTML = '';
+                let hasNotice = false;
+
+                snapshot.forEach(docSnap => {
+                    const notice = docSnap.data();
+                    const sDate = notice.startDate.replace(/-/g, '');
+                    const eDate = notice.endDate.replace(/-/g, '');
+
+                    // 判斷日期是否有效，且發布對象包含「物業助理」或「全體」
+                    if (today >= sDate && today <= eDate && (notice.departments.includes('物業助理') || notice.departments.includes('全體'))) {
+                        hasNotice = true;
+                        noticeList.innerHTML += `<div style="background: white; padding: 10px; border-radius: 6px; font-size: 14px; color: #333; border: 1px solid #ffeeba;">
+                            <strong style="color:var(--danger);">[重要]</strong> ${window.escapeHTML(notice.text)}
+                        </div>`;
+                    }
+                });
+
+                if (hasNotice) { container.style.display = 'block'; }
+                else { container.style.display = 'none'; }
+            });
+        };
+        
         window.toggleDeptOptions = function() {
             const dept = document.getElementById('dispatchDept').value;
             const mgtGroup = document.getElementById('managementCategoryGroup');
