@@ -209,12 +209,13 @@
                 return;
             }
 
+            // 🌟 修正：改成跳轉到你剛建立好的各部門資料夾中的 index.html，確保本機與雲端皆可正常跳轉
             if (role === 'admin' || role === 'sub_admin') {
-                window.location.replace('admin_dashboard.html');
+                window.location.replace('admin_dashboard/index.html');
             } else if (role === 'engineering') {
-                window.location.replace('engineering.html');
+                window.location.replace('engineering/index.html');
             } else if (role === 'cleaning') {
-                window.location.replace('cleaning.html');
+                window.location.replace('cleaning/index.html');
             } else {
                 alert("未知的權限設定，請聯絡管理員。");
                 auth.signOut();
