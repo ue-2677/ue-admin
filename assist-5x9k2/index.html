@@ -85,19 +85,53 @@
         const auth = getAuth(app);
         let currentUser = null;
         let currentPhotoBase64 = "";
-
+// ==========================================
+        // 🔐 登入驗證與監聽 (單一設備防護 + 助理權限版)
+        // ==========================================
+        let userDocListener = null;
         // 權限驗證 (允許 admin, sub_admin, engineering, cleaning 登入使用)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const username = user.email.replace("@patrol.com", '');
-                const userDoc = await getDoc(doc(db, "users", username));
-                if (userDoc.exists()) {
-                    currentUser = { username: username, ...userDoc.data() };
-                    document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
-                } else { window.location.replace('index.html'); }
-            } else { window.location.replace('index.html'); }
-        });
+                if (userDocListener) userDocListener();
+                
+                userDocListener = onSnapshot(doc(db, "users", username), (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        
+                        // 🛡️ 單一設備登入防護 (踢除舊設備機制)
+                        const dbSessionId = data.currentSessionId;
+                        const myLocalSessionId = localStorage.getItem('patrolSessionId');
+                        if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
+                            if (userDocListener) userDocListener();
+                            auth.signOut();
+                            localStorage.removeItem('patrolSessionId');
+                            alert("⚠️ 您的帳號已在其他設備或瀏覽器登入，本機已被強制登出！");
+                            window.location.replace('../index.html');
+                            return;
+                        }
 
+                        currentUser = { username: username, ...data };
+                        
+                        // 🌟 權限驗證：只允許 管理員、副管理員、以及【物業助理】進入
+                        if (!['admin', 'sub_admin', 'assistant'].includes(currentUser.role)) {
+                            alert("權限不足，將返回登入頁！");
+                            auth.signOut();
+                            window.location.replace('../index.html');
+                            return;
+                        }
+
+                        document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (物業助理)`;
+                    } else {
+                        if (userDocListener) userDocListener();
+                        auth.signOut();
+                        window.location.replace('../index.html');
+                    }
+                });
+            } else {
+                window.location.replace('../index.html');
+            }
+        });
         window.toggleDeptOptions = function() {
             const dept = document.getElementById('dispatchDept').value;
             const mgtGroup = document.getElementById('managementCategoryGroup');
