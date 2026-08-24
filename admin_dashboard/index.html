@@ -632,8 +632,8 @@
                             document.getElementById('sidebarContainer').style.display = 'flex';
                             document.getElementById('mainContentContainer').style.display = 'flex';
                             
-                            let roleName = (currentUser.role === 'admin') ? '最高管理員' : '二級管理員';
-                            document.getElementById('currentUserDisplay').innerHTML = `👤 ${currentUser.name} (${roleName}) ▼`;
+                            // 🌟 修正：只顯示名字，隱藏後面的權限等級
+                            document.getElementById('currentUserDisplay').innerHTML = `👤 ${currentUser.name} ▼`;
                             
                             initRealtimeListeners();
 
