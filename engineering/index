@@ -76,7 +76,14 @@
             <button class="btn btn-danger" onclick="window.performLogout()">🚪 登出</button>
         </div>
     </div>
-
+    <div class="content-body">
+        <!-- 🌟 每日注意事項跑馬燈區塊 -->
+        <div id="dailyNoticeContainer" style="display:none; background:#fff3cd; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
+            <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+        
+        <div class="card">
     <!-- 主要內容區塊 -->
     <div class="content-body">
         <div class="card">
@@ -272,7 +279,35 @@
                 window.renderWorkOrders();
             });
         }
+        // 🌟 監聽特別事項通知
+            onSnapshot(collection(db, "notices"), (snapshot) => {
+                const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                const noticeList = document.getElementById('dailyNoticeList');
+                const container = document.getElementById('dailyNoticeContainer');
+                noticeList.innerHTML = '';
+                let hasNotice = false;
+                
+                // ⚠️ 注意：如果你是在工程部檔案，這裡寫 "工程部"；如果在清潔部檔案，這裡改 "清潔部"
+                const myDeptName = "工程部"; 
 
+                snapshot.forEach(docSnap => {
+                    const notice = docSnap.data();
+                    const sDate = notice.startDate.replace(/-/g, '');
+                    const eDate = notice.endDate.replace(/-/g, '');
+                    
+                    // 判斷日期是否在今天，且目標部門包含自己或全體
+                    if (today >= sDate && today <= eDate && (notice.departments.includes(myDeptName) || notice.departments.includes('全體'))) {
+                        hasNotice = true;
+                        noticeList.innerHTML += `<div style="background: white; padding: 10px; border-radius: 6px; font-size: 14px; color: #333; border: 1px solid #ffeeba;">
+                            <strong style="color:var(--danger);">[重要]</strong> ${window.escapeHTML(notice.text)}
+                        </div>`;
+                    }
+                });
+
+                if (hasNotice) { container.style.display = 'block'; } 
+                else { container.style.display = 'none'; }
+            });
+        }
        // --- 篩選器觸發功能 ---
         window.applyFilters = function() { window.renderWorkOrders(); };
         window.clearFilters = function() {
