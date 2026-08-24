@@ -70,12 +70,16 @@
             <li class="nav-item active" onclick="window.switchAdminView('view-dashboard', this)">📊 即時儀表板</li>
             <li class="nav-item" onclick="window.switchAdminView('view-management', this)">🗺️ 路線與點位管理</li>
             <li class="nav-item" onclick="window.switchAdminView('view-users', this)">👥 人員與權限管理</li>
-            <!-- 🌟 加入這兩行 -->
             <li class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢 特別事項通知發布</li>
-            <li class="nav-item" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</li>
             
-            <li class="nav-item" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</li>
-            <li class="nav-item" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</li>
+            <!-- 🌟 管理員專屬：查看物業助理發來的需求 -->
+            <li class="nav-item" onclick="window.switchAdminView('view-assistant', this)">🔔 物業助理需求通知</li>
+
+            <!-- 🌟 終極防迷路路徑：明確指定回上一層後，進入該資料夾的 index.html -->
+            <li class="nav-item" onclick="window.open('../assist-5x9k2/index.html', '_blank')">📋 物業助理派單系統</li>
+            <li class="nav-item" onclick="window.open('../engineering/index.html', '_blank')">🔧 工程部派單後台</li>
+            <li class="nav-item" onclick="window.open('../cleaning/index.html', '_blank')">🧹 清潔部派單後台</li>
+            
             <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
         </ul>
         <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.5 (資安強固版)</p></div>
