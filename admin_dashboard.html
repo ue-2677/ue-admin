@@ -75,7 +75,7 @@
             <li class="nav-item" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</li>
             
             <li class="nav-item" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</li>
-            <li class="nav-item" onclick="window.open('cleaning.html', '_blank')">🧹 清潔部派單後台</li>
+            <li class="nav-item" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</li>
             <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
         </ul>
         <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.5 (資安強固版)</p></div>
@@ -236,9 +236,47 @@
             </div>
         </div>
     </div>
-    
+    <!-- 視圖：特別事項通知 -->
+            <div id="view-notices" class="view-section">
+                <div class="card">
+                    <div class="card-header">
+                        📢 跨部門每日注意事項 / 特別通知
+                        <button class="btn btn-primary" onclick="window.openNoticeModal()">➕ 新增通知</button>
+                    </div>
+                    <table>
+                        <thead><tr><th style="width: 45%;">通知內容</th><th style="width: 20%;">有效期限</th><th style="width: 20%;">目標部門</th><th style="width: 15%;">操作</th></tr></thead>
+                        <tbody id="noticesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
     <!-- ================== 彈窗 Modal 區塊 ================== -->
-    
+    <!-- 新增特別事項通知 -->
+    <div id="noticeModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <h3 style="color:var(--primary); margin-top:0;">📢 發布特別事項通知</h3>
+            <div class="form-group">
+                <label>通知內容</label>
+                <textarea id="noticeTextInput" class="form-control" rows="3" placeholder="例如：明日A棟將停水，請注意水塔儲水量..."></textarea>
+            </div>
+            <div class="form-group" style="display:flex; gap:10px;">
+                <div style="flex:1;"><label>生效日期</label><input type="date" id="noticeStartDate" class="form-control"></div>
+                <div style="flex:1;"><label>結束日期</label><input type="date" id="noticeEndDate" class="form-control"></div>
+            </div>
+            <div class="form-group">
+                <label>發布目標部門 (可複選)</label>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; background:#f8f9fa; padding:15px; border-radius:6px; border:1px solid #eee;">
+                    <label style="cursor:pointer;"><input type="checkbox" class="notice-dept-chk" value="工程部" checked> 🔧 工程部</label>
+                    <label style="cursor:pointer;"><input type="checkbox" class="notice-dept-chk" value="清潔部" checked> 🧹 清潔部</label>
+                    <label style="cursor:pointer;"><input type="checkbox" class="notice-dept-chk" value="管理部"> 💼 管理部</label>
+                    <label style="cursor:pointer;"><input type="checkbox" class="notice-dept-chk" value="全體"> 🌍 全體巡邏員(手機前台)</label>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.saveNotice()">發布通知</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('noticeModal').classList.remove('active')">取消</button>
+            </div>
+        </div>
+    </div>
     <div id="taskDetailModal" class="modal">
         <div class="modal-content" style="width: 800px;">
             <h3 id="taskDetailTitle">任務詳細資訊</h3>
@@ -505,6 +543,10 @@
         // 📊 即時監聽與畫面載入
         // ==========================================
         function initRealtimeListeners() {
+            onSnapshot(query(collection(db, "notices"), orderBy("createdAt", "desc")), (snapshot) => {
+              dbNotices = []; snapshot.forEach(doc => { dbNotices.push({ id: doc.id, ...doc.data() }); });
+              if(document.getElementById('view-notices').classList.contains('active')) window.loadNoticesData();
+          });
             onSnapshot(collection(db, "users"), (snapshot) => {
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
                 if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
@@ -542,7 +584,61 @@
         }
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
+    window.loadNoticesData = function() {
+          const tbody = document.getElementById('noticesTableBody'); tbody.innerHTML = '';
+          if (dbNotices.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">目前無任何通知</td></tr>'; return; }
 
+          const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+          dbNotices.forEach(notice => {
+              const sDate = notice.startDate.replace(/-/g, '');
+              const eDate = notice.endDate.replace(/-/g, '');
+              // 判斷是否過期
+              let statusTag = (today >= sDate && today <= eDate) ? '<span class="badge badge-success">生效中</span>' : '<span class="badge badge-secondary">未生效/已過期</span>';
+
+              const depts = notice.departments.map(d => `<span class="badge badge-info" style="margin-right:4px;">${d}</span>`).join('');
+
+              tbody.innerHTML += `<tr>
+                  <td><strong>${window.escapeHTML(notice.text)}</strong><br><span style="font-size:11px; color:#888;">發布者: ${notice.createdBy}</span></td>
+                  <td style="font-family:monospace; font-size:13px;">${notice.startDate} ~ ${notice.endDate}<br>${statusTag}</td>
+                  <td>${depts}</td>
+                  <td><button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteNotice('${notice.id}')">🗑️ 刪除</button></td>
+              </tr>`;
+          });
+      };
+
+      window.openNoticeModal = function() {
+          document.getElementById('noticeTextInput').value = '';
+          const today = new Date().toISOString().slice(0, 10);
+          document.getElementById('noticeStartDate').value = today;
+          document.getElementById('noticeEndDate').value = today;
+          document.querySelectorAll('.notice-dept-chk').forEach(c => c.checked = (c.value === '工程部' || c.value === '清潔部'));
+          document.getElementById('noticeModal').classList.add('active');
+      };
+
+      window.saveNotice = async function() {
+          const text = document.getElementById('noticeTextInput').value.trim();
+          const sDate = document.getElementById('noticeStartDate').value;
+          const eDate = document.getElementById('noticeEndDate').value;
+          let targetDepts = [];
+          document.querySelectorAll('.notice-dept-chk:checked').forEach(c => targetDepts.push(c.value));
+
+          if (!text || !sDate || !eDate) { alert("請填寫完整內容與日期！"); return; }
+          if (sDate > eDate) { alert("結束日期不可早於開始日期！"); return; }
+          if (targetDepts.length === 0) { alert("至少選擇一個發布部門！"); return; }
+
+          try {
+              await addDoc(collection(db, "notices"), {
+                  text: text, startDate: sDate, endDate: eDate, departments: targetDepts,
+                  createdBy: currentUser.name, createdAt: Date.now()
+              });
+              document.getElementById('noticeModal').classList.remove('active');
+              alert("✅ 通知發布成功！");
+          } catch(e) { alert("發布失敗，請檢查網路。"); }
+      };
+
+      window.deleteNotice = async function(id) {
+          if(confirm("確定要刪除這條通知嗎？")) await deleteDoc(doc(db, "notices", id));
+      };
         window.refreshCurrentView = function() {
             if(document.getElementById('view-dashboard').classList.contains('active')) window.loadDashboardData();
             if(document.getElementById('view-management').classList.contains('active')) { window.loadRoutesData(); window.loadPointsData(); }
