@@ -3,34 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>物業助理派單系統</title>
+    <title>大樓巡邏系統 - 工程部派單後台</title>
     <style>
-        :root { --primary: #6f42c1; --bg: #f4f6f9; --text: #333; --danger: #dc3545; --success: #28a745; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        .header { width: 100%; max-width: 600px; background: var(--primary); color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;}
-        .header h1 { margin: 0; font-size: 20px; }
-        .card { width: 100%; max-width: 600px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); box-sizing: border-box; }
-        .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 15px; color: #555; }
-        .form-control { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; color: white; transition: 0.2s; margin-top: 10px; }
+        :root { --primary: #007bff; --bg: #f4f6f9; --text: #333; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --secondary: #6c757d; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .topbar h2 { margin: 0; font-size: 22px; color: var(--primary); }
+        .content-body { padding: 30px; flex-grow: 1; overflow-y: auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+        .card-header h3 { margin: 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: top; }
+        th { background-color: #f8f9fa; color: #555; }
+        tr:hover { background-color: #fafafa; }
+        .btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; color: white; transition: 0.2s; margin-right: 5px; margin-bottom: 5px; }
         .btn-primary { background: var(--primary); }
         .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #333; }
         .btn-danger { background: var(--danger); }
-        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary { background: var(--secondary); }
+        .btn-info { background: #17a2b8; }
         .btn:hover { opacity: 0.9; }
-        .msg-box { margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; display: none; text-align: center; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .status-pending { background: #ffeeba; color: #856404; }
+        .status-done { background: #d4edda; color: #155724; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         
         /* 🌟 個人選單與下拉樣式 */
-        .profile-trigger { cursor: pointer; user-select: none; position: relative; z-index: 10; display: inline-flex; align-items: center; background: rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 8px; color: white; font-weight: bold; font-size: 14px; transition: 0.2s; border: 1px solid rgba(255,255,255,0.3); }
-        .profile-trigger:active { background: rgba(255,255,255,0.3); }
+        .profile-trigger { cursor: pointer; user-select: none; position: relative; z-index: 10; display: inline-flex; align-items: center; background: #e8f0fe; padding: 8px 12px; border-radius: 8px; color: var(--primary); font-weight: bold; font-size: 14px; transition: 0.2s; border: 1px solid #d2e3fc; }
+        .profile-trigger:active { background: #d2e3fc; }
         .profile-dropdown-content { display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; width: 140px; z-index: 1000; border: 1px solid #eee; }
         .profile-dropdown-content.active { display: block; animation: fadeIn 0.2s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🌟 彈窗與浮動按鈕樣式 */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        /* 🌟 管理員返回後台專用浮動按鈕 */
         .fab-back-admin {
             position: fixed; bottom: 20px; left: 20px; width: 55px; height: 55px;
             background-color: #6c757d; color: white; border-radius: 50%;
@@ -39,88 +50,166 @@
             z-index: 1000; border: none; transition: transform 0.2s; text-decoration: none;
         }
         .fab-back-admin:active { transform: scale(0.9); }
+
+        /* ========================================= */
+        /* 📱 手機版專屬樣式 (螢幕寬度小於 768px 時自動觸發) */
+        /* ========================================= */
+        @media (max-width: 768px) {
+            .topbar { flex-direction: column; align-items: flex-start; padding: 15px; gap: 12px; }
+            .topbar h2 { font-size: 20px; }
+            .topbar div { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+            
+            .content-body { padding: 10px; }
+            .card { padding: 15px 10px; }
+            .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            
+            table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
+            thead tr { display: none; } 
+            
+            tr { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); background: white; }
+            td { border: none; border-bottom: 1px dashed #eee; position: relative; padding: 10px 0 10px 85px; text-align: left; min-height: 24px; }
+            td:last-child { border-bottom: none; padding: 15px 0 5px 0; text-align: center; }
+            
+            td::before { position: absolute; top: 12px; left: 0; width: 75px; font-weight: bold; color: var(--primary); font-size: 13px; }
+            td:nth-of-type(1)::before { content: "編號 :"; }
+            td:nth-of-type(2)::before { content: "地點 :"; }
+            td:nth-of-type(3)::before { content: "說明 :"; }
+            td:nth-of-type(4)::before { content: "時間 :"; }
+            td:nth-of-type(5)::before { content: "狀態 :"; }
+            
+            .btn { width: 100%; margin-bottom: 8px; padding: 12px; font-size: 15px; box-sizing: border-box; display: block; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>📋 物業助理跨部門派單系統</h1>
-        <div style="position: relative;">
-            <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)">👤 載入中 ▼</div>
-            <div id="profileMenu" class="profile-dropdown-content">
-                <button class="btn btn-warning" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 8px; margin-top:0;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
-                <button class="btn btn-danger" style="width: 100%; padding: 10px; font-size: 14px; margin: 0;" onclick="window.performLogout()">🚪 登出系統</button>
+    <!-- 頂部導覽列 -->
+    <div class="topbar">
+        <h2>🔧 工程部 - 工單維修處理系統</h2>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span id="clock" style="font-size: 14px; color: #666;"></span>
+            <div style="border-left: 1px solid #ccc; height: 20px;"></div>
+            
+            <div style="position: relative;">
+                <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)">👤 載入中 ▼</div>
+                <div id="profileMenu" class="profile-dropdown-content">
+                    <button class="btn btn-warning" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 8px; margin-top:0;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
+                    <button class="btn btn-danger" style="width: 100%; padding: 10px; font-size: 14px; margin: 0;" onclick="window.performLogout()">🚪 登出系統</button>
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- 🌟 每日注意事項跑馬燈區塊 -->
-    <div id="dailyNoticeContainer" style="display:none; width: 100%; max-width: 600px; background:#fff3cd; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box;">
-        <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
-        <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
-    </div>
-
-    <div class="card">
-        <div class="form-group">
-            <label>1. 選擇要派發的部門</label>
-            <select id="dispatchDept" class="form-control" onchange="window.toggleDeptOptions()">
-                <option value="清潔部">🧹 清潔部</option>
-                <option value="工程部">🔧 工程部</option>
-                <option value="管理部">💼 管理部門 (總幹事/行政)</option>
-            </select>
+    
+    <div class="content-body">
+        <!-- 🌟 每日注意事項跑馬燈區塊 -->
+        <div id="dailyNoticeContainer" style="display:none; background:#fff3cd; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
+            <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
-
-        <div class="form-group" id="managementCategoryGroup" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-            <label style="color: var(--primary);">📍 選擇管理部需求類別</label>
-            <select id="managementCategory" class="form-control">
-                <option value="補文件">📄 補文件</option>
-                <option value="住戶投訴">🗣️ 住戶投訴處理</option>
-                <option value="其他需求">💡 其他需求</option>
-            </select>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>📋 待處理與完工紀錄</h3>
+                <button class="btn btn-warning" onclick="window.exportWorkOrders()">📤 備份工單紀錄</button>
+            </div>
+            
+            <!-- 👇 篩選器面板 👇 -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
+                    <input type="text" id="filterKeyword" class="form-control" placeholder="編號、地點、說明..." onkeyup="window.applyFilters()" style="padding: 8px;">
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
+                    <input type="date" id="filterStartDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
+                    <input type="date" id="filterEndDate" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 處理狀態</label>
+                    <select id="filterStatus" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
+                        <option value="all">全部狀態</option>
+                        <option value="待處理">🟠 待處理</option>
+                        <option value="已完成">✅ 已完成</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: flex-end; margin-top: 18px;">
+                    <button class="btn btn-secondary" onclick="window.clearFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
+                </div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 12%;">工單編號</th>
+                        <th style="width: 15%;">地點</th>
+                        <th style="width: 33%;">狀況說明與照片</th>
+                        <th style="width: 12%;">派單時間</th>
+                        <th style="width: 8%;">狀態</th>
+                        <th style="width: 20%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="workOrderTableBody">
+                    <tr><td colspan="6" style="text-align:center; color:#999;">連線中...</td></tr>
+                </tbody>
+            </table>
         </div>
-
-        <div class="form-group">
-            <label>2. 發生地點 / 相關戶號</label>
-            <input type="text" id="dispatchLocation" class="form-control" placeholder="例如：A棟大廳、B棟12樓...">
-        </div>
-
-        <div class="form-group">
-            <label>3. 拍攝或上傳現場照片 (選填)</label>
-            <input type="file" id="dispatchPhotoInput" accept="image/*" capture="environment" class="form-control" onchange="window.handlePhotoUpload(event)">
-            <img id="dispatchPhotoPreview" style="display:none; width:100%; max-height:250px; object-fit:contain; margin-top:10px; border-radius:6px; border:1px solid #ccc;">
-        </div>
-
-        <div class="form-group">
-            <label>4. 需求詳細說明</label>
-            <textarea id="dispatchText" class="form-control" rows="4" placeholder="請描述詳細情況或要求..."></textarea>
-        </div>
-
-        <button class="btn btn-primary" id="submitBtn" onclick="window.submitWorkOrder()">🚀 立即派發工單</button>
-        <div id="statusMsg" class="msg-box"></div>
     </div>
 
     <!-- 管理員返回後台浮動按鈕 -->
     <button id="adminBackBtn" class="fab-back-admin" onclick="window.location.replace('../admin_dashboard/')">⬅️</button>
 
+    <!-- 完工回報彈窗 -->
+    <div id="completeModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:var(--success);">✅ 完工回報 / 編輯報告</h3>
+            <p style="font-size:13px; color:#666; margin-top:-5px;">可拍照留存處理結果或填寫備註說明。</p>
+            <div class="form-group">
+                <label>📸 完工照片 (選填)</label>
+                <input type="file" id="completePhotoInput" accept="image/*" capture="environment" class="form-control" onchange="window.handleCompletePhotoUpload(event)">
+                <img id="completePhotoPreview" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:6px; border:1px solid #ccc;">
+            </div>
+            <div class="form-group">
+                <label>📝 處理備註 (選填)</label>
+                <textarea id="completeTextInput" rows="3" class="form-control" style="resize:vertical;" placeholder="例如：已更換水管零件，測試正常..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1; padding: 12px; font-size: 15px;" onclick="window.submitComplete()">儲存資料</button>
+                <button class="btn btn-secondary" style="flex: 1; padding: 12px; font-size: 15px;" onclick="document.getElementById('completeModal').style.display='none'">取消</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 更改密碼彈窗 -->
     <div id="selfPasswordModal" class="modal">
         <div class="modal-content" style="max-width: 400px; padding: 25px;">
-            <h3 style="margin-top:0; color:#1a73e8;">🔑 更改個人密碼</h3>
+            <h3 style="margin-top:0; color:var(--primary);">🔑 更改個人密碼</h3>
             <div class="form-group"><label>目前的舊密碼</label><input type="password" id="selfOldPassword" class="form-control"></div>
             <div class="form-group"><label>設定新密碼</label><input type="password" id="selfNewPassword" class="form-control"></div>
             <div class="form-group"><label>再次確認新密碼</label><input type="password" id="selfConfirmPassword" class="form-control"></div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-success" style="flex: 1;" onclick="window.saveSelfPassword()">確認更新</button>
-                <button class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('selfPasswordModal').style.display='none'">取消</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="document.getElementById('selfPasswordModal').style.display='none'">取消</button>
             </div>
         </div>
     </div>
-
+    
+    <!-- 圖片點擊放大預覽視窗 -->
+    <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
+        <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+        <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
+        <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
+    </div>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc, getDoc } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
             authDomain: "test-ue-app.firebaseapp.com",
@@ -132,9 +221,14 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
+        const auth = getAuth(app); 
+        const VIRTUAL_DOMAIN = "@patrol.com"; 
+
         let currentUser = null;
-        let currentPhotoBase64 = "";
+        let dbUsers = {};
+        let dbWorkOrders = [];
+        let currentCompleteOrderId = null;
+        let currentCompletePhotoBase64 = "";
 
         window.escapeHTML = function(str) {
             if (str === null || str === undefined) return '';
@@ -143,30 +237,35 @@
                 return charsToReplace[tag] || tag;
             });
         };
-        
-        let userDocListener = null;
+
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
+
+        // ==========================================
+        // 🔐 登入驗證與監聽 (單一設備防護版)
+        // ==========================================
+        window.isSystemInitialized = false; 
+        let userDocListener = null; 
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                let username = user.email.replace("@patrol.com", '');
-                const q = query(collection(db, "users"), where("authEmail", "==", user.email));
-                const snap = await getDocs(q);
-                if (!snap.empty) { username = snap.docs[0].id; }
-
-                if (userDocListener) userDocListener();
+                const username = user.email.replace(VIRTUAL_DOMAIN, '');
                 
+                if (userDocListener) userDocListener(); 
+
                 userDocListener = onSnapshot(doc(db, "users", username), (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
+                        // 🛡️ 密碼被重設防護
                         if (data.authEmail && data.authEmail !== user.email) {
                             if (userDocListener) userDocListener();
                             auth.signOut();
-                            alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請重新登入！");
+                            alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請使用新密碼重新登入！");
                             window.location.replace('../');
                             return;
                         }
 
+                        // 🛡️ 單一設備登入防護
                         const dbSessionId = data.currentSessionId;
                         const myLocalSessionId = localStorage.getItem('patrolSessionId');
                         if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
@@ -180,22 +279,28 @@
 
                         currentUser = { username: username, ...data };
                         
-                        if (!['admin', 'sub_admin', 'assistant'].includes(currentUser.role)) {
+                        // ⚠️ 防呆檢查
+                        if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'engineering') {
                             alert("權限不足，將返回登入頁！");
                             auth.signOut();
                             window.location.replace('../');
                             return;
                         }
-
-                        document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} ▼`;
                         
-                        if (currentUser.role === 'admin' || currentUser.role === 'sub_admin') {
-                            const backBtn = document.getElementById('adminBackBtn');
-                            if (backBtn) backBtn.style.display = 'flex';
+                        if (!window.isSystemInitialized) {
+                            window.isSystemInitialized = true;
+                            
+                            // 🌟 顯示人名與下拉選單箭頭
+                            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} ▼`;
+                            
+                            // 🌟 如果是最高或二級管理員，顯示左下角返回按鈕
+                            if (currentUser.role === 'admin' || currentUser.role === 'sub_admin') {
+                                const backBtn = document.getElementById('adminBackBtn');
+                                if (backBtn) backBtn.style.display = 'flex';
+                            }
+                            
+                            initRealtimeListeners();
                         }
-                        
-                        window.initNoticesListener();
-                        
                     } else {
                         if (userDocListener) userDocListener();
                         auth.signOut();
@@ -203,6 +308,8 @@
                     }
                 });
             } else {
+                if (userDocListener) { userDocListener(); userDocListener = null; }
+                window.isSystemInitialized = false;
                 window.location.replace('../');
             }
         });
@@ -216,7 +323,20 @@
             }
         };
 
-        window.initNoticesListener = function() {
+        // --- Firebase 即時監聽 ---
+        function initRealtimeListeners() {
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
+            });
+
+            const q = query(collection(db, "workOrders"), where("department", "==", "工程部"));
+            onSnapshot(q, (snapshot) => {
+                dbWorkOrders = [];
+                snapshot.forEach(doc => { dbWorkOrders.push({ id: doc.id, ...doc.data() }); });
+                window.renderWorkOrders();
+            });
+
+            // 🌟 監聽特別事項通知
             onSnapshot(collection(db, "notices"), (snapshot) => {
                 const d = new Date();
                 const today = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
@@ -224,13 +344,15 @@
                 const container = document.getElementById('dailyNoticeContainer');
                 noticeList.innerHTML = '';
                 let hasNotice = false;
+                
+                const myDeptName = "工程部"; 
 
                 snapshot.forEach(docSnap => {
                     const notice = docSnap.data();
                     const sDate = notice.startDate.replace(/-/g, '');
                     const eDate = notice.endDate.replace(/-/g, '');
-
-                    if (today >= sDate && today <= eDate && (notice.departments.includes('物業助理') || notice.departments.includes('全體'))) {
+                    
+                    if (today >= sDate && today <= eDate && (notice.departments.includes(myDeptName) || notice.departments.includes('全體'))) {
                         hasNotice = true;
                         noticeList.innerHTML += `<div style="background: white; padding: 10px; border-radius: 6px; font-size: 14px; color: #333; border: 1px solid #ffeeba;">
                             <strong style="color:var(--danger);">[重要]</strong> ${window.escapeHTML(notice.text)}
@@ -238,88 +360,209 @@
                     }
                 });
 
-                if (hasNotice) { container.style.display = 'block'; }
+                if (hasNotice) { container.style.display = 'block'; } 
                 else { container.style.display = 'none'; }
             });
-        };
-        
-        window.toggleDeptOptions = function() {
-            const dept = document.getElementById('dispatchDept').value;
-            const mgtGroup = document.getElementById('managementCategoryGroup');
-            if (dept === '管理部') mgtGroup.style.display = 'block';
-            else mgtGroup.style.display = 'none';
+        }
+
+        // --- 篩選器與表格渲染 ---
+        window.applyFilters = function() { window.renderWorkOrders(); };
+        window.clearFilters = function() {
+            document.getElementById('filterKeyword').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterStatus').value = 'all';
+            window.renderWorkOrders();
         };
 
-        window.handlePhotoUpload = function(event) {
-            const file = event.target.files[0]; if (!file) return;
+        window.renderWorkOrders = function() {
+            const tbody = document.getElementById('workOrderTableBody');
+            tbody.innerHTML = '';
+            
+            const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
+            const startDateRaw = document.getElementById('filterStartDate').value; 
+            const endDateRaw = document.getElementById('filterEndDate').value;     
+            const statusFilter = document.getElementById('filterStatus').value;
+
+            const startDate = startDateRaw ? startDateRaw.replace(/-/g, '') : '00000000';
+            const endDate = endDateRaw ? endDateRaw.replace(/-/g, '') : '99999999';
+
+            let filteredOrders = dbWorkOrders.filter(order => {
+                if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+                if (keyword) {
+                    const searchStr = `${order.refNumber} ${order.location} ${order.description || ''} ${order.completeRemark || ''}`.toLowerCase();
+                    if (!searchStr.includes(keyword)) return false;
+                }
+                const dateMatch = order.refNumber.match(/-(\d{8})-/);
+                if (dateMatch) {
+                    const orderDate = dateMatch[1];
+                    if (orderDate < startDate || orderDate > endDate) return false;
+                }
+                return true; 
+            });
+
+            filteredOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
+
+            if (filteredOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 30px;">找不到符合條件的工單。</td></tr>';
+                return;
+            }
+
+            filteredOrders.forEach(order => {
+                const safeRefNumber = window.escapeHTML(order.refNumber);
+                const safeReporter = window.escapeHTML(order.reporter || '保全');
+                const safeLocation = window.escapeHTML(order.location);
+                const safeDesc = order.description ? window.escapeHTML(order.description) : '<span style="color:#aaa;">無文字說明</span>';
+                const safeRemark = order.completeRemark ? window.escapeHTML(order.completeRemark) : '<span style="color:#888;">無備註</span>';
+
+                const statusClass = order.status === '已完成' ? 'status-done' : 'status-pending';
+                const statusBadge = `<span class="badge ${statusClass}">${order.status}</span>`;
+
+                const initialPhotoHtml = order.photo 
+                    ? `<div style="margin-top:6px;">
+                        <img src="${order.photo}" onclick="window.openImageModal('${order.photo}')" 
+                             style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer; transition:0.2s;" 
+                             onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                       </div>` 
+                    : '';
+
+                const completeInfoHtml = order.status === '已完成' && (order.completeRemark || order.completePhoto)
+                    ? `<div style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-left: 3px solid #28a745; font-size: 13px; border-radius: 4px;">
+                        <strong>✅ 完工回報：</strong>${safeRemark}<br>
+                        ${order.completePhoto ? `
+                            <img src="${order.completePhoto}" onclick="window.openImageModal('${order.completePhoto}')" 
+                                 style="max-height:80px; margin-top:5px; border-radius:4px; border:1px solid #ccc; object-fit:contain; cursor:pointer; transition:0.2s;" 
+                                 onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                        ` : ''}
+                       </div>`
+                    : '';
+
+                let actionBtns = '';
+                if (order.status !== '已完成') {
+                    actionBtns += `<button class="btn btn-success" onclick="window.openCompleteModal('${order.id}')">✅ 標記完工</button>`;
+                } else {
+                    actionBtns += `<button class="btn btn-info" onclick="window.editCompleteModal('${order.id}')">✏️ 修改完工報告</button>`;
+                }
+                actionBtns += `<button class="btn btn-danger" onclick="window.deleteWorkOrder('${order.id}')">🗑️ 刪除</button>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${safeRefNumber}</strong><br><span style="font-size:11px; color:#888;">通報人: ${safeReporter}</span></td>
+                        <td style="color:var(--primary); font-weight:bold;">${safeLocation}</td>
+                        <td>
+                            <div>${safeDesc}</div>
+                            ${initialPhotoHtml}
+                            ${completeInfoHtml}
+                        </td>
+                        <td style="color:#666; font-size:13px;">${order.dispatchTime}</td>
+                        <td>${statusBadge}</td>
+                        <td>${actionBtns}</td>
+                    </tr>
+                `;
+            });
+        };
+
+        // --- 完工與修改報告邏輯 ---
+        window.openCompleteModal = function(orderId) {
+            currentCompleteOrderId = orderId;
+            currentCompletePhotoBase64 = "";
+            document.getElementById('completePhotoInput').value = '';
+            document.getElementById('completeTextInput').value = '';
+            document.getElementById('completePhotoPreview').style.display = 'none';
+            document.getElementById('completeModal').style.display = 'flex';
+        };
+
+        window.editCompleteModal = function(orderId) {
+            const order = dbWorkOrders.find(o => o.id === orderId);
+            currentCompleteOrderId = orderId;
+            currentCompletePhotoBase64 = order.completePhoto || "";
+            
+            document.getElementById('completePhotoInput').value = '';
+            document.getElementById('completeTextInput').value = order.completeRemark || "";
+            
+            if(order.completePhoto) {
+                document.getElementById('completePhotoPreview').src = order.completePhoto;
+                document.getElementById('completePhotoPreview').style.display = 'block';
+            } else {
+                document.getElementById('completePhotoPreview').style.display = 'none';
+            }
+            document.getElementById('completeModal').style.display = 'flex';
+        };
+
+        window.handleCompletePhotoUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; let width = img.width, height = img.height;
+                    const MAX_WIDTH = 800; 
+                    let width = img.width, height = img.height;
                     if (width > MAX_WIDTH) { height = Math.floor(height * (MAX_WIDTH / width)); width = MAX_WIDTH; }
                     canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
-                    const preview = document.getElementById('dispatchPhotoPreview');
-                    preview.src = currentPhotoBase64; preview.style.display = 'block';
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    currentCompletePhotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+                    const preview = document.getElementById('completePhotoPreview');
+                    preview.src = currentCompletePhotoBase64;
+                    preview.style.display = 'block';
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         };
 
-        window.submitWorkOrder = async function() {
-            const dept = document.getElementById('dispatchDept').value;
-            const location = document.getElementById('dispatchLocation').value.trim();
-            let descText = document.getElementById('dispatchText').value.trim();
+        window.submitComplete = async function() {
+            const text = document.getElementById('completeTextInput').value.trim();
+            const photo = currentCompletePhotoBase64;
             
-            if (!location) { alert("請填寫發生地點！"); return; }
-            if (!descText && !currentPhotoBase64) { alert("請填寫說明或提供照片！"); return; }
-        
-            let prefix = 'AST';
-            if (dept === '工程部') prefix = 'ENG';
-            else if (dept === '清潔部') prefix = 'CLN';
-            else if (dept === '管理部') {
-                prefix = 'MGT';
-                const cat = document.getElementById('managementCategory').value;
-                descText = `[${cat}] ${descText}`;
+            if (!text && !photo) {
+                if (!confirm("您沒有加上任何備註或照片，確定要送出嗎？")) return;
             }
 
-            const btn = document.getElementById('submitBtn');
-            const msg = document.getElementById('statusMsg');
-            btn.disabled = true; btn.innerText = "⏳ 傳送中...";
-            const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
-        
             try {
-                const q = query(collection(db, "workOrders"), where("department", "==", dept));
-                const querySnapshot = await getDocs(q);
-                const refNumber = `${prefix}-${dateStr}-${String(querySnapshot.size + 1).padStart(3, '0')}`;
-        
-                await addDoc(collection(db, "workOrders"), {
-                    refNumber: refNumber, department: dept, location: location,
-                    description: descText, photo: currentPhotoBase64, reporter: currentUser.name + ' (助理派單)',
-                    reportTime: new Date().toLocaleTimeString('zh-TW', { hour12: false }), 
-                    dispatchTime: new Date().toLocaleString(), status: "待處理"
+                await updateDoc(doc(db, "workOrders", currentCompleteOrderId), {
+                    status: '已完成',
+                    completeTime: new Date().toLocaleString(),
+                    completeRemark: text,
+                    completePhoto: photo
                 });
-                
-                msg.style.display = 'block'; msg.style.background = '#d4edda'; msg.style.color = '#155724';
-                msg.innerText = `✅ 派單成功！單號：${refNumber}`;
-                
-                setTimeout(() => {
-                    document.getElementById('dispatchLocation').value = '';
-                    document.getElementById('dispatchText').value = '';
-                    document.getElementById('dispatchPhotoInput').value = '';
-                    document.getElementById('dispatchPhotoPreview').style.display = 'none';
-                    currentPhotoBase64 = '';
-                    btn.disabled = false; btn.innerText = "🚀 立即派發工單";
-                    msg.style.display = 'none';
-                }, 2500);
+                document.getElementById('completeModal').style.display = 'none';
+            } catch(e) { alert("狀態更新失敗，請檢查網路連線！"); }
+        };
 
-            } catch (e) { 
-                alert("派單失敗，請檢查網路連線。"); 
-                btn.disabled = false; btn.innerText = "🚀 立即派發工單";
+        window.exportWorkOrders = function() {
+            const dataStr = JSON.stringify(dbWorkOrders, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `工程部工單備份_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+        };
+
+        window.logDeletion = async function(itemType, deletedData) {
+            try {
+                await addDoc(collection(db, "deleteLogs"), {
+                    deletedAt: new Date().toLocaleString(),
+                    deletedTimestamp: Date.now(),
+                    deletedBy: currentUser.name + " (" + currentUser.username + ")",
+                    itemType: itemType,
+                    dataSnapshot: JSON.stringify(deletedData)
+                });
+            } catch (e) { console.error("寫入刪除紀錄失敗", e); }
+        };
+
+        window.deleteWorkOrder = async function(orderId) {
+            const orderData = dbWorkOrders.find(o => o.id === orderId);
+            if (!orderData) return;
+            if (confirm(`警告：確定要刪除工單 ${orderData.refNumber} 嗎？此操作將被記錄備查。`)) {
+                try {
+                    await window.logDeletion("工程部工單", orderData);
+                    await deleteDoc(doc(db, "workOrders", orderId));
+                } catch(e) { alert("刪除失敗"); }
             }
         };
 
@@ -367,6 +610,17 @@
                 if (e.code === 'auth/invalid-credential') alert("❌ 舊密碼輸入錯誤！");
                 else alert("❌ 更新失敗：" + e.message); 
             }
+        };
+
+        window.openImageModal = function(base64Src) {
+            if (!base64Src) return;
+            document.getElementById('enlargedImage').src = base64Src;
+            document.getElementById('imageViewerModal').style.display = 'flex';
+        };
+
+        window.closeImageModal = function() {
+            document.getElementById('imageViewerModal').style.display = 'none';
+            document.getElementById('enlargedImage').src = ''; 
         };
     </script>
 </body>
