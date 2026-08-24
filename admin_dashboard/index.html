@@ -506,7 +506,7 @@
                             if (userDocListener) userDocListener();
                             auth.signOut();
                             alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請使用新密碼重新登入！");
-                            window.location.replace('index.html');
+                            window.location.replace('../index.html');
                             return;
                         }
 
@@ -518,7 +518,7 @@
                             auth.signOut();
                             localStorage.removeItem('patrolSessionId');
                             alert("⚠️ 您的帳號已在其他設備或瀏覽器登入，本機已被強制登出！");
-                            window.location.replace('index.html');
+                            window.location.replace('../index.html');
                             return;
                         }
 
@@ -527,7 +527,7 @@
                         if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin') {
                             alert("權限不足，將返回登入頁！");
                             auth.signOut();
-                            window.location.replace('index.html');
+                            window.location.replace('../index.html');
                             return;
                         }
                         
@@ -545,13 +545,13 @@
                     } else {
                         if (userDocListener) userDocListener();
                         auth.signOut();
-                        window.location.replace('index.html');
+                        window.location.replace('../index.html');
                     }
                 });
             } else {
                 if (userDocListener) { userDocListener(); userDocListener = null; }
                 window.isSystemInitialized = false;
-                window.location.replace('index.html');
+                window.location.replace('../index.html');
             }
         });
 
@@ -560,7 +560,7 @@
                 await auth.signOut();
                 localStorage.removeItem('cloudCurrentUser'); 
                 localStorage.removeItem('patrolSessionId'); // 🌟 登出時確實銷毀鑰匙
-                window.location.replace('index.html');
+                window.location.replace('../index.html');
             }
         };
 
@@ -1237,7 +1237,7 @@
                 window.closeModal('selfPasswordModal');
                 alert("✅ 密碼修改成功！基於安全機制，請使用新密碼重新登入。");
                 await auth.signOut();
-                window.location.replace('index.html'); 
+                window.location.replace('../index.html'); 
             } catch(e) { 
                 console.error(e);
                 if (e.code === 'auth/invalid-credential') alert("❌ 舊密碼輸入錯誤！");
