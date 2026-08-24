@@ -250,6 +250,26 @@
                 </div>
             </div>
     <!-- ================== 彈窗 Modal 區塊 ================== -->
+   <div id="view-assistant" class="view-section">
+                <div class="card">
+                    <div class="card-header">
+                        🔔 物業助理需求通知 (管理部專屬)
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 12%;">單號</th>
+                                <th style="width: 15%;">發生地點</th>
+                                <th style="width: 38%;">需求說明與照片</th>
+                                <th style="width: 15%;">提報時間</th>
+                                <th style="width: 10%;">狀態</th>
+                                <th style="width: 10%;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assistantRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
     <!-- 新增特別事項通知 -->
     <div id="noticeModal" class="modal">
         <div class="modal-content" style="width:500px;">
@@ -440,6 +460,7 @@
         let dbPoints = [];
         let dbUidMappings = {};
         let dbTasks = [];
+        let dbAssistantRequests = [];
         let currentUser = null;
         let adminScannedUid = "";
         const VIRTUAL_DOMAIN = "@patrol.com";
@@ -547,6 +568,11 @@
               dbNotices = []; snapshot.forEach(doc => { dbNotices.push({ id: doc.id, ...doc.data() }); });
               if(document.getElementById('view-notices').classList.contains('active')) window.loadNoticesData();
           });
+            onSnapshot(query(collection(db, "workOrders"), where("department", "==", "管理部")), (snapshot) => {
+                dbAssistantRequests = []; 
+                snapshot.forEach(doc => { dbAssistantRequests.push({ id: doc.id, ...doc.data() }); });
+                if(document.getElementById('view-assistant').classList.contains('active')) window.loadAssistantRequests();
+            });
             onSnapshot(collection(db, "users"), (snapshot) => {
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
                 if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
@@ -643,8 +669,62 @@
             if(document.getElementById('view-dashboard').classList.contains('active')) window.loadDashboardData();
             if(document.getElementById('view-management').classList.contains('active')) { window.loadRoutesData(); window.loadPointsData(); }
             if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
+            if(document.getElementById('view-notices').classList.contains('active')) window.loadNoticesData();
+            if(document.getElementById('view-assistant').classList.contains('active')) window.loadAssistantRequests(); // 🌟 補上這行
+        };
+        // --- 處理物業助理發來的需求清單 ---
+        window.loadAssistantRequests = function() {
+            const tbody = document.getElementById('assistantRequestsTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (dbAssistantRequests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前無任何管理部需求通知。</td></tr>';
+                return;
+            }
+
+            // 單號排序 (新的在最上面)
+            dbAssistantRequests.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
+
+            dbAssistantRequests.forEach(order => {
+                const safeRefNumber = window.escapeHTML(order.refNumber);
+                const safeLocation = window.escapeHTML(order.location);
+                const safeDesc = order.description ? window.escapeHTML(order.description) : '<span style="color:#aaa;">無文字說明</span>';
+                
+                const statusClass = order.status === '已完成' ? 'badge-success' : 'badge-warning';
+                const statusBadge = `<span class="badge ${statusClass}">${order.status}</span>`;
+
+                const photoHtml = order.photo ? `<div style="margin-top:6px;"><img src="${order.photo}" onclick="window.openImageModal('${order.photo}')" style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer; transition:0.2s;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大"></div>` : '';
+
+                const actionBtn = order.status !== '已完成' 
+                    ? `<button class="btn btn-success" style="padding: 4px 8px; font-size:12px; margin-bottom: 4px;" onclick="window.completeAssistantRequest('${order.id}')">✅ 完成</button><br>` 
+                    : ``;
+                const delBtn = `<button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteWorkOrder('${order.id}')">🗑️ 刪除</button>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${safeRefNumber}</strong><br><span style="font-size:11px; color:#888;">${order.reporter}</span></td>
+                        <td style="color:var(--primary); font-weight:bold;">${safeLocation}</td>
+                        <td><div>${safeDesc}</div>${photoHtml}</td>
+                        <td style="color:#666; font-size:13px;">${order.dispatchTime}</td>
+                        <td>${statusBadge}</td>
+                        <td>${actionBtn}${delBtn}</td>
+                    </tr>
+                `;
+            });
         };
 
+        window.completeAssistantRequest = async function(id) {
+            if(confirm("確定要將此需求標記為已處理完成嗎？")) {
+                await updateDoc(doc(db, "workOrders", id), { status: '已完成', completeTime: new Date().toLocaleString() });
+            }
+        };
+
+        window.deleteWorkOrder = async function(id) {
+            if(confirm("確定要刪除這筆紀錄嗎？")) {
+                await deleteDoc(doc(db, "workOrders", id));
+            }
+        };
         window.switchAdminView = function(viewId, element) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
