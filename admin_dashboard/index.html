@@ -401,6 +401,7 @@
                 <label>權限等級</label>
                 <select id="userModalRole" class="form-control">
                     <option value="user">一般巡邏員 (手機前台用)</option>
+                    <option value="assistant">物業助理 (專屬派單系統)</option>
                     <option value="engineering">工程部人員 (專屬派單後台)</option>
                     <option value="cleaning">清潔部人員 (專屬派單後台)</option>
                     <option value="sub_admin">二級管理員 (電腦後台部分權限)</option>
@@ -1096,6 +1097,7 @@
                     if (u.role === 'admin') roleBadge = '<span class="badge badge-danger">最高管理員</span>';
                     else if (u.role === 'sub_admin') roleBadge = '<span class="badge badge-warning">二級管理員</span>';
                     else if (u.role === 'engineering') roleBadge = '<span class="badge" style="background-color: #007bff; color: white;">工程部人員</span>';
+                    else if (u.role === 'assistant') roleBadge = '<span class="badge" style="background-color: #6f42c1; color: white;">物業助理</span>';
                     else if (u.role === 'cleaning') roleBadge = '<span class="badge" style="background-color: #17a2b8; color: white;">清潔部人員</span>';
                     else roleBadge = '<span class="badge badge-info">一般巡邏員</span>';
 
