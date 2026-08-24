@@ -82,7 +82,7 @@
             
             <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
         </ul>
-        <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.5 (資安強固版)</p></div>
+        <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v31.5 (資安強固版)</p></div>
     </div>
 
     <div class="main-content" id="mainContentContainer" style="display: none;">
@@ -238,7 +238,8 @@
                     </table>
                 </div>
             </div>
-    <!-- 視圖：特別事項通知 -->
+
+            <!-- 視圖：特別事項通知 -->
             <div id="view-notices" class="view-section">
                 <div class="card">
                     <div class="card-header">
@@ -251,6 +252,33 @@
                     </table>
                 </div>
             </div>
+
+            <!-- 視圖：物業助理需求通知 -->
+            <div id="view-assistant" class="view-section">
+                <div class="card">
+                    <div class="card-header">
+                        🔔 物業助理需求通知 (管理部專屬)
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 12%;">單號</th>
+                                <th style="width: 15%;">發生地點</th>
+                                <th style="width: 38%;">需求說明與照片</th>
+                                <th style="width: 15%;">提報時間</th>
+                                <th style="width: 10%;">狀態</th>
+                                <th style="width: 10%;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assistantRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> <!-- ✅ 這裡才是 content-body 真正的結尾 -->
+    </div> <!-- ✅ 這裡才是 main-content 真正的結尾 -->
+
+    <!-- ================== 彈窗 Modal 區塊 ================== -->
     <!-- ================== 彈窗 Modal 區塊 ================== -->
    <div id="view-assistant" class="view-section">
                 <div class="card">
