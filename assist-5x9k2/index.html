@@ -15,6 +15,7 @@
         .form-control { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
         .btn { width: 100%; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; color: white; transition: 0.2s; margin-top: 10px; }
         .btn-primary { background: var(--primary); }
+        .btn-danger { background: var(--danger); }
         .btn:hover { opacity: 0.9; }
         .msg-box { margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; display: none; text-align: center; }
     </style>
@@ -23,11 +24,11 @@
 
     <div class="header">
         <h1>📋 物業助理跨部門派單系統</h1>
-        <span id="currentUserDisplay" style="font-size: 14px;"></span>
-    </div>
-    <div class="header">
-        <h1>📋 物業助理跨部門派單系統</h1>
-        <span id="currentUserDisplay" style="font-size: 14px;"></span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span id="currentUserDisplay" style="font-size: 14px;"></span>
+            <!-- 🌟 補上登出按鈕 -->
+            <button class="btn btn-danger" style="margin: 0; padding: 6px 12px; font-size: 13px; width: auto;" onclick="window.performLogout()">🚪 登出</button>
+        </div>
     </div>
 
     <!-- 🌟 每日注意事項跑馬燈區塊 -->
@@ -35,6 +36,7 @@
         <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
         <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
     </div>
+
     <div class="card">
         <div class="form-group">
             <label>1. 選擇要派發的部門</label>
@@ -78,7 +80,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // 🌟 補上 signOut 方法
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
@@ -94,6 +97,7 @@
         const auth = getAuth(app);
         let currentUser = null;
         let currentPhotoBase64 = "";
+
         window.escapeHTML = function(str) {
             if (str === null || str === undefined) return '';
             return String(str).replace(/[&<>'"]/g, function(tag) {
@@ -102,19 +106,37 @@
             });
         };
         
-// ==========================================
+        // ==========================================
         // 🔐 登入驗證與監聽 (單一設備防護 + 助理權限版)
         // ==========================================
         let userDocListener = null;
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const username = user.email.replace("@patrol.com", '');
+                let username = user.email.replace("@patrol.com", '');
+                
+                // 🔍 替身反查機制：這段非常重要！讓系統能認得管理員新建的帳號
+                const q = query(collection(db, "users"), where("authEmail", "==", user.email));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    username = snap.docs[0].id; 
+                }
+
                 if (userDocListener) userDocListener();
                 
                 userDocListener = onSnapshot(doc(db, "users", username), (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
+                        // 🛡️ 密碼被重設防護
+                        if (data.authEmail && data.authEmail !== user.email) {
+                            if (userDocListener) userDocListener();
+                            auth.signOut();
+                            alert("⚠️ 此帳號的密碼已被管理員重設，舊憑證已失效，請重新登入！");
+                            window.location.replace('../');
+                            return;
+                        }
+
                         const dbSessionId = data.currentSessionId;
                         const myLocalSessionId = localStorage.getItem('patrolSessionId');
                         if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
@@ -122,7 +144,7 @@
                             auth.signOut();
                             localStorage.removeItem('patrolSessionId');
                             alert("⚠️ 您的帳號已在其他設備或瀏覽器登入，本機已被強制登出！");
-                            window.location.replace('../index.html');
+                            window.location.replace('../');
                             return;
                         }
 
@@ -131,25 +153,32 @@
                         if (!['admin', 'sub_admin', 'assistant'].includes(currentUser.role)) {
                             alert("權限不足，將返回登入頁！");
                             auth.signOut();
-                            window.location.replace('../index.html');
+                            window.location.replace('../');
                             return;
                         }
 
-                        document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} (物業助理)`;
-                        
-                        // 🌟 登入成功後，啟動通知監聽
+                        document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name}`;
                         window.initNoticesListener();
                         
                     } else {
                         if (userDocListener) userDocListener();
                         auth.signOut();
-                        window.location.replace('../index.html');
+                        window.location.replace('../');
                     }
                 });
             } else {
-                window.location.replace('../index.html');
+                window.location.replace('../');
             }
         });
+
+        window.performLogout = async function() {
+            if(confirm("確定要登出系統嗎？")) { 
+                await auth.signOut();
+                localStorage.removeItem('cloudCurrentUser'); 
+                localStorage.removeItem('patrolSessionId'); 
+                window.location.replace('../'); 
+            }
+        };
 
         // 🌟 接收通知的專屬功能
         window.initNoticesListener = function() {
