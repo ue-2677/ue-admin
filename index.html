@@ -211,14 +211,14 @@
 
             // 🌟 修正：改成資料夾路徑，解決 404 找不到網頁的問題
             if (role === 'admin' || role === 'sub_admin') {
-                window.location.replace('admin_dashboard/index.html');
+                window.location.replace('admin_dashboard/');
             } else if (role === 'engineering') {
-                window.location.replace('engineering/index.html');
+                window.location.replace('engineering/');
             } else if (role === 'cleaning') {
-                window.location.replace('cleaning/index.html');
+                window.location.replace('cleaning/');
             } else if (role === 'assistant') {
                 // 🌟 新增：物業助理專屬的跳轉路徑
-                window.location.replace('assist-5x9k2/index.html');
+                window.location.replace('assist-5x9k2/');
             } else {
                 alert("未知的權限設定，請聯絡管理員。");
                 auth.signOut();
