@@ -209,7 +209,7 @@
                 return;
             }
 
-            // 🌟 修正：改成跳轉到你剛建立好的各部門資料夾中的 index.html，確保本機與雲端皆可正常跳轉
+            // 👇 這裡非常重要！必須是「資料夾名稱 / index.html」
             if (role === 'admin' || role === 'sub_admin') {
                 window.location.replace('admin_dashboard/index.html');
             } else if (role === 'engineering') {
