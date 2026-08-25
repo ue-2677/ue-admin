@@ -146,6 +146,7 @@
                 <div style="position: relative;">
                     <div id="currentUserDisplay" class="profile-trigger" onclick="toggleProfileMenu(event)"></div>
                     <div id="profileMenu" class="profile-dropdown-content">
+                        <button class="btn btn-info" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openIssuedWorkOrdersModal()">📤 已發工單</button>
                         <button class="btn btn-warning" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
                         <button class="btn btn-danger" style="width: 100%; margin: 0; font-size: 14px;" onclick="window.performLogout()">🚪 登出系統</button>
                     </div>
@@ -528,7 +529,34 @@
             </div>
         </div>
     </div>
-
+    <!-- 新增：已發工單追蹤 Modal -->
+    <div id="issuedWorkOrdersModal" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <h3 style="color: var(--info); margin-top:0;">📤 已發出的工單追蹤</h3>
+            <p style="font-size:13px; color:#666; margin-top:-10px;">這裡顯示從系統轉派給工程部或清潔部的所有工單處理進度。</p>
+            
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                    <thead style="background: #f0f2f5; position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th style="padding:10px; border-bottom:1px solid #ddd;">單號 / 部門</th>
+                            <th style="padding:10px; border-bottom:1px solid #ddd;">地點</th>
+                            <th style="padding:10px; border-bottom:1px solid #ddd; width:30%;">說明</th>
+                            <th style="padding:10px; border-bottom:1px solid #ddd;">派發時間</th>
+                            <th style="padding:10px; border-bottom:1px solid #ddd;">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="issuedWorkOrdersTableBody">
+                        <tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="document.getElementById('issuedWorkOrdersModal').classList.remove('active')">關閉視窗</button>
+            </div>
+        </div>
+    </div>
     <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
         <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
         <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
@@ -1713,6 +1741,64 @@
         window.editRoute = function(id) { window.openRouteModal(id); };
         window.deleteRoute = async function(id) { if (confirm("確定要刪除這條路線嗎？")) await deleteDoc(doc(db, "routes", id)); };
 
+        // 🌟 新增：打開「已發工單」視窗並讀取資料
+        window.openIssuedWorkOrdersModal = async function() {
+            // 先關閉個人下拉選單
+            document.getElementById('profileMenu').classList.remove('active');
+            
+            const modal = document.getElementById('issuedWorkOrdersModal');
+            const tbody = document.getElementById('issuedWorkOrdersTableBody');
+            
+            // 打開視窗並顯示載入中
+            modal.classList.add('active');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">讀取雲端工單資料中...</td></tr>';
+            
+            try {
+                // 從資料庫抓取所有工單
+                const querySnapshot = await getDocs(collection(db, "workOrders"));
+                let orders = [];
+                querySnapshot.forEach((doc) => {
+                    orders.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // 過濾出轉派出去的工單 (排除物業助理的需求)
+                orders = orders.filter(o => o.department === '工程部' || o.department === '清潔部');
+                
+                // 根據單號(包含日期)進行反向排序 (最新的在最上面)
+                orders.sort((a, b) => (b.refNumber || "").localeCompare(a.refNumber || ""));
+                
+                tbody.innerHTML = '';
+                
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">目前沒有發出的工單紀錄。</td></tr>';
+                    return;
+                }
+                
+                // 渲染工單資料到表格中
+                orders.forEach(order => {
+                    const statusClass = order.status === '已完成' ? 'badge-success' : 'badge-warning';
+                    const statusBadge = `<span class="badge ${statusClass}">${window.escapeHTML(order.status || '待處理')}</span>`;
+                    
+                    const safeRef = window.escapeHTML(order.refNumber);
+                    const safeDept = window.escapeHTML(order.department);
+                    const safeLoc = window.escapeHTML(order.location);
+                    const safeDesc = window.escapeHTML(order.description || '無文字說明');
+                    
+                    tbody.innerHTML += `
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding:10px;"><strong>${safeRef}</strong><br><span style="font-size:11px; color:#888;">${safeDept}</span></td>
+                            <td style="padding:10px; color:var(--primary); font-weight:bold;">${safeLoc}</td>
+                            <td style="padding:10px; font-size:12px;">${safeDesc}</td>
+                            <td style="padding:10px; font-size:12px; color:#666;">${window.escapeHTML(order.dispatchTime)}</td>
+                            <td style="padding:10px;">${statusBadge}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("讀取工單失敗:", error);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>';
+            }
+        };
     </script>
 </body>
 </html>
