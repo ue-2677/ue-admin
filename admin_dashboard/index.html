@@ -1269,13 +1269,16 @@
                 await addDoc(collection(db, "workOrders"), {
                     refNumber: refNumber, department: dept, location: window.currentDispatchData.location,
                     description: descText, photo: window.currentDispatchData.photo, reporter: window.currentDispatchData.reporter,
-                    reportTime: window.currentDispatchData.reportTime, dispatchTime: new Date().toLocaleString(), status: "待處理"
+                    reportTime: window.currentDispatchData.reportTime, dispatchTime: new Date().toLocaleString(), status: "待處理",
+                    
+                    // 🌟 核心修改：把當前操作者的帳號與名稱記錄到工單中
+                    dispatcherUsername: currentUser.username,
+                    dispatcherName: currentUser.name
                 });
                 alert(`✅ 成功派發！\n獨立工單編號：${refNumber}`);
                 document.getElementById('dispatchModal').classList.remove('active');
             } catch (e) { alert("派單失敗，請檢查網路連線。"); }
         };
-
         // 🌟 升級：載入人員時進行條件過濾
         window.loadUsersData = function() {
             try {
@@ -1762,7 +1765,10 @@
                 });
                 
                 // 過濾出轉派出去的工單 (排除物業助理的需求)
-                orders = orders.filter(o => o.department === '工程部' || o.department === '清潔部');
+                orders = orders.filter(o => 
+                    (o.department === '工程部' || o.department === '清潔部') && 
+                    o.dispatcherUsername === currentUser.username
+                );
                 
                 // 根據單號(包含日期)進行反向排序 (最新的在最上面)
                 orders.sort((a, b) => (b.refNumber || "").localeCompare(a.refNumber || ""));
