@@ -135,7 +135,12 @@
         <div class="nav-item" onclick="window.openManualIssueModal()">📝<br>發單</div>
         <div class="nav-item active" onclick="window.switchAdminView('view-mobile-home', this)">🏠<br>各部連結</div>
         <div class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢<br>特別事項</div>
-        <div class="nav-item" onclick="window.switchAdminView('view-assistant', this)">🔔<br>助理需求</div>
+        
+        <!-- 👇 修改這裡，把原本單行的助理需求展開，並加入 assistantBadge -->
+        <div class="nav-item" onclick="window.switchAdminView('view-assistant', this)">
+            🔔<br>助理需求
+            <span id="assistantBadge" class="nav-badge" style="display:none;">0</span>
+        </div>
     </div>
 
     <div class="main-content" id="mainContentContainer" style="display: none;">
