@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大樓巡邏系統 - 清潔部派單後台</title>
+    <link rel="stylesheet" href="../common.css">
     <style>
         :root { --primary: #17a2b8; --bg: #f4f6f9; --text: #333; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --secondary: #6c757d; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -120,6 +121,7 @@
                     <select id="filterStatus" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
                         <option value="all">全部狀態</option>
                         <option value="待處理">🟠 待處理</option>
+                        <option value="跟進中">🔵 跟進中</option>
                         <option value="已完成">✅ 已完成</option>
                     </select>
                 </div>
@@ -172,7 +174,7 @@
 
     <!-- 更改密碼彈窗 -->
     <div id="selfPasswordModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 400px; padding: 25px;">
             <h3 style="margin-top:0; color:var(--primary);">🔑 更改個人密碼</h3>
             <div class="form-group"><label>目前的舊密碼</label><input type="password" id="selfOldPassword" class="form-control"></div>
             <div class="form-group"><label>設定新密碼</label><input type="password" id="selfNewPassword" class="form-control"></div>
@@ -184,6 +186,7 @@
         </div>
     </div>
     
+    <!-- 圖片點擊放大預覽視窗 -->
     <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
         <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
         <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
@@ -191,39 +194,21 @@
     </div>
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc, getDoc } 
+        import { db, auth, escapeHTML, getLocalDateStr } from '../firebase-config.js';
+        import { collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+        import { onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
-            authDomain: "test-ue-app.firebaseapp.com",
-            projectId: "test-ue-app",
-            storageBucket: "test-ue-app.firebasestorage.app",
-            messagingSenderId: "203707145209",
-            appId: "1:203707145209:web:647068d7d0e4b843b47b28"
-        };
+        window.escapeHTML = escapeHTML;
+        window.getLocalDateStr = getLocalDateStr;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app); 
         const VIRTUAL_DOMAIN = "@patrol.com"; 
-
         let currentUser = null;
         let dbUsers = {};
         let dbWorkOrders = [];
         let currentCompleteOrderId = null;
         let currentCompletePhotoBase64 = "";
-
-        window.escapeHTML = function(str) {
-            if (str === null || str === undefined) return '';
-            return String(str).replace(/[&<>'"]/g, function(tag) {
-                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
-                return charsToReplace[tag] || tag;
-            });
-        };
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
@@ -269,13 +254,11 @@
                         
                         if (!window.isSystemInitialized) {
                             window.isSystemInitialized = true;
-                            
                             document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} ▼`;
                             if (currentUser.role === 'admin' || currentUser.role === 'sub_admin') {
                                 const backBtn = document.getElementById('adminBackBtn');
                                 if (backBtn) backBtn.style.display = 'flex';
                             }
-
                             initRealtimeListeners();
                         }
                     } else {
@@ -300,27 +283,57 @@
             }
         };
 
+        window.playAlertSound = function() {
+            const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+            audio.play().catch(e => console.log("音效可能被瀏覽器阻擋", e));
+        };
+
+        window.showSystemNotification = function(title, body) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827370.png' });
+            }
+        };
+
+        let isInitialLoad = true;
+
         function initRealtimeListeners() {
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+
+            const myDeptName = "清潔部";
+
             onSnapshot(collection(db, "users"), (snapshot) => {
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
             });
 
-            const q = query(collection(db, "workOrders"), where("department", "==", "清潔部"));
+            const q = query(collection(db, "workOrders"), where("department", "==", myDeptName));
             onSnapshot(q, (snapshot) => {
                 dbWorkOrders = [];
                 snapshot.forEach(doc => { dbWorkOrders.push({ id: doc.id, ...doc.data() }); });
                 window.renderWorkOrders();
+
+                if (!isInitialLoad) {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added") {
+                            const data = change.doc.data();
+                            if (data.dispatcherUsername !== currentUser.username) {
+                                window.playAlertSound();
+                                window.showSystemNotification(`🔔 收到新工單 (${myDeptName})`, `地點: ${data.location}\n說明: ${data.description || '無文字說明'}`);
+                            }
+                        }
+                    });
+                }
             });
 
+            setTimeout(() => { isInitialLoad = false; }, 3000);
+
             onSnapshot(collection(db, "notices"), (snapshot) => {
-                const d = new Date();
-                const today = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+                const today = window.getLocalDateStr(false);
                 const noticeList = document.getElementById('dailyNoticeList');
                 const container = document.getElementById('dailyNoticeContainer');
                 noticeList.innerHTML = '';
                 let hasNotice = false;
-                
-                const myDeptName = "清潔部"; 
 
                 snapshot.forEach(docSnap => {
                     const notice = docSnap.data();
@@ -386,11 +399,23 @@
                 const safeRefNumber = window.escapeHTML(order.refNumber);
                 const safeReporter = window.escapeHTML(order.reporter || '保全');
                 const safeLocation = window.escapeHTML(order.location);
-                const safeDesc = order.description ? window.escapeHTML(order.description) : '<span style="color:#aaa;">無文字說明</span>';
+                let safeDesc = order.description ? window.escapeHTML(order.description) : '<span style="color:#aaa;">無文字說明</span>';
                 const safeRemark = order.completeRemark ? window.escapeHTML(order.completeRemark) : '<span style="color:#888;">無備註</span>';
 
-                const statusClass = order.status === '已完成' ? 'status-done' : 'status-pending';
-                const statusBadge = `<span class="badge ${statusClass}">${order.status}</span>`;
+                if (order.status === '已完成' && order.completionRemark) {
+                    safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
+                }
+
+                let statusClass = 'status-pending';
+                let statusText = order.status || '待處理';
+                if (order.status === '已完成') statusClass = 'status-done';
+                else if (order.status === '跟進中') statusClass = 'badge-info';
+
+                let statusBadge = `<span class="badge ${statusClass}">${window.escapeHTML(statusText)}</span>`;
+                const personName = order.completer || order.assignee;
+                if ((order.status === '跟進中' || order.status === '已完成') && personName) {
+                    statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
+                }
 
                 const initialPhotoHtml = order.photo 
                     ? `<div style="margin-top:6px;">
@@ -412,7 +437,10 @@
                     : '';
 
                 let actionBtns = '';
-                if (order.status !== '已完成') {
+                if (!order.status || order.status === '待處理') {
+                    actionBtns += `<button class="btn btn-primary" onclick="window.takeWorkOrder('${order.id}')">✋ 接收此單</button>`;
+                    actionBtns += `<button class="btn btn-success" onclick="window.openCompleteModal('${order.id}')">✅ 標記完工</button>`;
+                } else if (order.status === '跟進中') {
                     actionBtns += `<button class="btn btn-success" onclick="window.openCompleteModal('${order.id}')">✅ 標記完工</button>`;
                 } else {
                     actionBtns += `<button class="btn btn-info" onclick="window.editCompleteModal('${order.id}')">✏️ 修改完工報告</button>`;
@@ -434,6 +462,16 @@
                     </tr>
                 `;
             });
+        };
+
+        window.takeWorkOrder = async function(orderId) {
+            try {
+                await updateDoc(doc(db, "workOrders", orderId), {
+                    status: '跟進中',
+                    assignee: currentUser.name || currentUser.username,
+                    takeTime: new Date().toLocaleString()
+                });
+            } catch(e) { alert("接單失敗，請檢查網路連線。"); }
         };
 
         window.openCompleteModal = function(orderId) {
@@ -500,7 +538,8 @@
                     status: '已完成',
                     completeTime: new Date().toLocaleString(),
                     completeRemark: text,
-                    completePhoto: photo
+                    completePhoto: photo,
+                    completer: currentUser.name || currentUser.username
                 });
                 document.getElementById('completeModal').style.display = 'none';
             } catch(e) { alert("狀態更新失敗，請檢查網路連線！"); }
@@ -512,7 +551,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `清潔部工單備份_${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = `清潔部工單備份_${window.getLocalDateStr(false)}.json`;
             a.click();
         };
 
@@ -539,7 +578,6 @@
             }
         };
 
-        // --- 個人下拉選單邏輯 ---
         window.toggleProfileMenu = function(e) {
             e.stopPropagation();
             document.getElementById('profileMenu').classList.toggle('active');
@@ -551,7 +589,6 @@
             }
         });
 
-        // --- 更改密碼邏輯 ---
         window.openSelfPasswordModal = function() {
             document.getElementById('profileMenu').classList.remove('active');
             document.getElementById('selfOldPassword').value = ''; 
