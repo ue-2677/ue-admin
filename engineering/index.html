@@ -133,6 +133,7 @@
                     <select id="filterStatus" class="form-control" onchange="window.applyFilters()" style="padding: 8px;">
                         <option value="all">全部狀態</option>
                         <option value="待處理">🟠 待處理</option>
+                        <option value="跟進中">🔵 跟進中</option>
                         <option value="已完成">✅ 已完成</option>
                     </select>
                 </div>
@@ -166,7 +167,7 @@
     <div id="completeModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; color:var(--success);">✅ 完工回報 / 編輯報告</h3>
-            <p style="font-size:13px; color:#666; margin-top:-5px;">可拍照留存處理結果或填寫備註說明。</p>
+            <p style="font-size:13px; color:#666; margin-top:-5px;">此單號已處理完畢，您要加入結案備註嗎？</p>
             <div class="form-group">
                 <label>📸 完工照片 (選填)</label>
                 <input type="file" id="completePhotoInput" accept="image/*" capture="environment" class="form-control" onchange="window.handleCompletePhotoUpload(event)">
@@ -204,21 +205,16 @@
         <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
     </div>
     
-   <script type="module">
-        // 🌟 1. 從上一層的共用檔案中「匯入」設定與工具
+    <script type="module">
         import { db, auth, escapeHTML, getLocalDateStr } from '../firebase-config.js';
-        
-        // 🌟 2. 匯入本頁需要的 Firestore 與 Auth 功能
         import { collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        // 🌟 3. 將共用工具函數綁定到 window 上
         window.escapeHTML = escapeHTML;
         window.getLocalDateStr = getLocalDateStr;
 
-        // 🌟 4. 本頁專用變數
         const VIRTUAL_DOMAIN = "@patrol.com"; 
         let currentUser = null;
         let dbUsers = {};
@@ -228,23 +224,18 @@
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
-        // ==========================================
-        // 🔐 登入驗證與監聽 (單一設備防護版)
-        // ==========================================
         window.isSystemInitialized = false; 
         let userDocListener = null; 
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const username = user.email.replace(VIRTUAL_DOMAIN, '');
-                
                 if (userDocListener) userDocListener(); 
 
                 userDocListener = onSnapshot(doc(db, "users", username), (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
-                        // 🛡️ 密碼被重設防護
                         if (data.authEmail && data.authEmail !== user.email) {
                             if (userDocListener) userDocListener();
                             auth.signOut();
@@ -253,7 +244,6 @@
                             return;
                         }
 
-                        // 🛡️ 單一設備登入防護
                         const dbSessionId = data.currentSessionId;
                         const myLocalSessionId = localStorage.getItem('patrolSessionId');
                         if (dbSessionId && myLocalSessionId && dbSessionId !== myLocalSessionId) {
@@ -267,7 +257,6 @@
 
                         currentUser = { username: username, ...data };
                         
-                        // ⚠️ 防呆檢查
                         if (currentUser.role !== 'admin' && currentUser.role !== 'sub_admin' && currentUser.role !== 'engineering') {
                             alert("權限不足，將返回登入頁！");
                             auth.signOut();
@@ -277,16 +266,11 @@
                         
                         if (!window.isSystemInitialized) {
                             window.isSystemInitialized = true;
-                            
-                            // 🌟 顯示人名與下拉選單箭頭
                             document.getElementById('currentUserDisplay').innerText = `👤 ${currentUser.name} ▼`;
-                            
-                            // 🌟 如果是最高或二級管理員，顯示左下角返回按鈕
                             if (currentUser.role === 'admin' || currentUser.role === 'sub_admin') {
                                 const backBtn = document.getElementById('adminBackBtn');
                                 if (backBtn) backBtn.style.display = 'flex';
                             }
-                            
                             initRealtimeListeners();
                         }
                     } else {
@@ -311,8 +295,6 @@
             }
         };
 
-        // --- Firebase 即時監聽 ---
-        // 🌟 系統音效與原生推播通知函數
         window.playAlertSound = function() {
             const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
             audio.play().catch(e => console.log("音效可能被瀏覽器阻擋", e));
@@ -324,17 +306,14 @@
             }
         };
 
-        let isInitialLoad = true; // 🌟 宣告初始載入鎖
+        let isInitialLoad = true;
 
-        // --- Firebase 即時監聽 ---
         function initRealtimeListeners() {
-            // 🌟 啟動監聽時，順便向瀏覽器請求推播權限
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
                 Notification.requestPermission();
             }
 
-            // 🌟 自動判斷當前部門是工程部還是清潔部
-            const myDeptName = document.querySelector('h2').innerText.includes('工程部') ? '工程部' : '清潔部';
+            const myDeptName = "工程部";
 
             onSnapshot(collection(db, "users"), (snapshot) => {
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
@@ -346,12 +325,10 @@
                 snapshot.forEach(doc => { dbWorkOrders.push({ id: doc.id, ...doc.data() }); });
                 window.renderWorkOrders();
 
-                // 🌟 處理新工單的推播通知
                 if (!isInitialLoad) {
                     snapshot.docChanges().forEach((change) => {
                         if (change.type === "added") {
                             const data = change.doc.data();
-                            // 收到別部門或系統自動派的單才叫
                             if (data.dispatcherUsername !== currentUser.username) {
                                 window.playAlertSound();
                                 window.showSystemNotification(`🔔 收到新工單 (${myDeptName})`, `地點: ${data.location}\n說明: ${data.description || '無文字說明'}`);
@@ -361,12 +338,10 @@
                 }
             });
 
-            // 🌟 3秒後解除初始載入鎖定
             setTimeout(() => { isInitialLoad = false; }, 3000);
 
-            // 🌟 監聽特別事項通知
             onSnapshot(collection(db, "notices"), (snapshot) => {
-                const today = window.getLocalDateStr(false); // 改用本地時間函數
+                const today = window.getLocalDateStr(false);
                 const noticeList = document.getElementById('dailyNoticeList');
                 const container = document.getElementById('dailyNoticeContainer');
                 noticeList.innerHTML = '';
@@ -390,36 +365,6 @@
             });
         }
 
-            // 🌟 監聽特別事項通知
-            onSnapshot(collection(db, "notices"), (snapshot) => {
-                const d = new Date();
-                const today = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-                const noticeList = document.getElementById('dailyNoticeList');
-                const container = document.getElementById('dailyNoticeContainer');
-                noticeList.innerHTML = '';
-                let hasNotice = false;
-                
-                const myDeptName = "工程部"; 
-
-                snapshot.forEach(docSnap => {
-                    const notice = docSnap.data();
-                    const sDate = notice.startDate.replace(/-/g, '');
-                    const eDate = notice.endDate.replace(/-/g, '');
-                    
-                    if (today >= sDate && today <= eDate && (notice.departments.includes(myDeptName) || notice.departments.includes('全體'))) {
-                        hasNotice = true;
-                        noticeList.innerHTML += `<div style="background: white; padding: 10px; border-radius: 6px; font-size: 14px; color: #333; border: 1px solid #ffeeba;">
-                            <strong style="color:var(--danger);">[重要]</strong> ${window.escapeHTML(notice.text)}
-                        </div>`;
-                    }
-                });
-
-                if (hasNotice) { container.style.display = 'block'; } 
-                else { container.style.display = 'none'; }
-            });
-        }
-
-        // --- 篩選器與表格渲染 ---
         window.applyFilters = function() { window.renderWorkOrders(); };
         window.clearFilters = function() {
             document.getElementById('filterKeyword').value = '';
@@ -466,11 +411,23 @@
                 const safeRefNumber = window.escapeHTML(order.refNumber);
                 const safeReporter = window.escapeHTML(order.reporter || '保全');
                 const safeLocation = window.escapeHTML(order.location);
-                const safeDesc = order.description ? window.escapeHTML(order.description) : '<span style="color:#aaa;">無文字說明</span>';
+                let safeDesc = order.description ? window.escapeHTML(order.description) : '<span style="color:#aaa;">無文字說明</span>';
                 const safeRemark = order.completeRemark ? window.escapeHTML(order.completeRemark) : '<span style="color:#888;">無備註</span>';
 
-                const statusClass = order.status === '已完成' ? 'status-done' : 'status-pending';
-                const statusBadge = `<span class="badge ${statusClass}">${order.status}</span>`;
+                if (order.status === '已完成' && order.completionRemark) {
+                    safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
+                }
+
+                let statusClass = 'status-pending';
+                let statusText = order.status || '待處理';
+                if (order.status === '已完成') statusClass = 'status-done';
+                else if (order.status === '跟進中') statusClass = 'badge-info';
+
+                let statusBadge = `<span class="badge ${statusClass}">${window.escapeHTML(statusText)}</span>`;
+                const personName = order.completer || order.assignee;
+                if ((order.status === '跟進中' || order.status === '已完成') && personName) {
+                    statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
+                }
 
                 const initialPhotoHtml = order.photo 
                     ? `<div style="margin-top:6px;">
@@ -492,7 +449,10 @@
                     : '';
 
                 let actionBtns = '';
-                if (order.status !== '已完成') {
+                if (!order.status || order.status === '待處理') {
+                    actionBtns += `<button class="btn btn-primary" onclick="window.takeWorkOrder('${order.id}')">✋ 接收此單</button>`;
+                    actionBtns += `<button class="btn btn-success" onclick="window.openCompleteModal('${order.id}')">✅ 標記完工</button>`;
+                } else if (order.status === '跟進中') {
                     actionBtns += `<button class="btn btn-success" onclick="window.openCompleteModal('${order.id}')">✅ 標記完工</button>`;
                 } else {
                     actionBtns += `<button class="btn btn-info" onclick="window.editCompleteModal('${order.id}')">✏️ 修改完工報告</button>`;
@@ -516,7 +476,16 @@
             });
         };
 
-        // --- 完工與修改報告邏輯 ---
+        window.takeWorkOrder = async function(orderId) {
+            try {
+                await updateDoc(doc(db, "workOrders", orderId), {
+                    status: '跟進中',
+                    assignee: currentUser.name || currentUser.username,
+                    takeTime: new Date().toLocaleString()
+                });
+            } catch(e) { alert("接單失敗，請檢查網路連線。"); }
+        };
+
         window.openCompleteModal = function(orderId) {
             currentCompleteOrderId = orderId;
             currentCompletePhotoBase64 = "";
@@ -581,7 +550,8 @@
                     status: '已完成',
                     completeTime: new Date().toLocaleString(),
                     completeRemark: text,
-                    completePhoto: photo
+                    completePhoto: photo,
+                    completer: currentUser.name || currentUser.username
                 });
                 document.getElementById('completeModal').style.display = 'none';
             } catch(e) { alert("狀態更新失敗，請檢查網路連線！"); }
@@ -620,7 +590,6 @@
             }
         };
 
-        // --- 個人下拉選單邏輯 ---
         window.toggleProfileMenu = function(e) {
             e.stopPropagation();
             document.getElementById('profileMenu').classList.toggle('active');
@@ -632,7 +601,6 @@
             }
         });
 
-        // --- 更改密碼邏輯 ---
         window.openSelfPasswordModal = function() {
             document.getElementById('profileMenu').classList.remove('active');
             document.getElementById('selfOldPassword').value = ''; 
