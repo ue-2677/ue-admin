@@ -2075,6 +2075,12 @@
                         </tr>
                     `;
                 });
+                // 👇 補上丟失的 try...catch 結尾與函數的括號 👇
+            } catch (error) {
+                console.error("讀取工單失敗:", error);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>';
+            }
+        };
     </script>
 </body>
 </html>
