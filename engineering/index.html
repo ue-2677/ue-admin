@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大樓巡邏系統 - 工程部派單後台</title>
+    <link rel="stylesheet" href="../common.css">
     <style>
         :root { --primary: #007bff; --bg: #f4f6f9; --text: #333; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --secondary: #6c757d; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -203,40 +204,27 @@
         <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
     </div>
     
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc, getDoc } 
+   <script type="module">
+        // 🌟 1. 從上一層的共用檔案中「匯入」設定與工具
+        import { db, auth, escapeHTML, getLocalDateStr } from '../firebase-config.js';
+        
+        // 🌟 2. 匯入本頁需要的 Firestore 與 Auth 功能
+        import { collection, onSnapshot, doc, updateDoc, query, where, addDoc, deleteDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+        import { onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
-            authDomain: "test-ue-app.firebaseapp.com",
-            projectId: "test-ue-app",
-            storageBucket: "test-ue-app.firebasestorage.app",
-            messagingSenderId: "203707145209",
-            appId: "1:203707145209:web:647068d7d0e4b843b47b28"
-        };
+        // 🌟 3. 將共用工具函數綁定到 window 上
+        window.escapeHTML = escapeHTML;
+        window.getLocalDateStr = getLocalDateStr;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app); 
+        // 🌟 4. 本頁專用變數
         const VIRTUAL_DOMAIN = "@patrol.com"; 
-
         let currentUser = null;
         let dbUsers = {};
         let dbWorkOrders = [];
         let currentCompleteOrderId = null;
         let currentCompletePhotoBase64 = "";
-
-        window.escapeHTML = function(str) {
-            if (str === null || str === undefined) return '';
-            return String(str).replace(/[&<>'"]/g, function(tag) {
-                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
-                return charsToReplace[tag] || tag;
-            });
-        };
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
 
@@ -324,17 +312,83 @@
         };
 
         // --- Firebase 即時監聽 ---
+        // 🌟 系統音效與原生推播通知函數
+        window.playAlertSound = function() {
+            const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+            audio.play().catch(e => console.log("音效可能被瀏覽器阻擋", e));
+        };
+
+        window.showSystemNotification = function(title, body) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827370.png' });
+            }
+        };
+
+        let isInitialLoad = true; // 🌟 宣告初始載入鎖
+
+        // --- Firebase 即時監聽 ---
         function initRealtimeListeners() {
+            // 🌟 啟動監聽時，順便向瀏覽器請求推播權限
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+
+            // 🌟 自動判斷當前部門是工程部還是清潔部
+            const myDeptName = document.querySelector('h2').innerText.includes('工程部') ? '工程部' : '清潔部';
+
             onSnapshot(collection(db, "users"), (snapshot) => {
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
             });
 
-            const q = query(collection(db, "workOrders"), where("department", "==", "工程部"));
+            const q = query(collection(db, "workOrders"), where("department", "==", myDeptName));
             onSnapshot(q, (snapshot) => {
                 dbWorkOrders = [];
                 snapshot.forEach(doc => { dbWorkOrders.push({ id: doc.id, ...doc.data() }); });
                 window.renderWorkOrders();
+
+                // 🌟 處理新工單的推播通知
+                if (!isInitialLoad) {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added") {
+                            const data = change.doc.data();
+                            // 收到別部門或系統自動派的單才叫
+                            if (data.dispatcherUsername !== currentUser.username) {
+                                window.playAlertSound();
+                                window.showSystemNotification(`🔔 收到新工單 (${myDeptName})`, `地點: ${data.location}\n說明: ${data.description || '無文字說明'}`);
+                            }
+                        }
+                    });
+                }
             });
+
+            // 🌟 3秒後解除初始載入鎖定
+            setTimeout(() => { isInitialLoad = false; }, 3000);
+
+            // 🌟 監聽特別事項通知
+            onSnapshot(collection(db, "notices"), (snapshot) => {
+                const today = window.getLocalDateStr(false); // 改用本地時間函數
+                const noticeList = document.getElementById('dailyNoticeList');
+                const container = document.getElementById('dailyNoticeContainer');
+                noticeList.innerHTML = '';
+                let hasNotice = false;
+
+                snapshot.forEach(docSnap => {
+                    const notice = docSnap.data();
+                    const sDate = notice.startDate.replace(/-/g, '');
+                    const eDate = notice.endDate.replace(/-/g, '');
+                    
+                    if (today >= sDate && today <= eDate && (notice.departments.includes(myDeptName) || notice.departments.includes('全體'))) {
+                        hasNotice = true;
+                        noticeList.innerHTML += `<div style="background: white; padding: 10px; border-radius: 6px; font-size: 14px; color: #333; border: 1px solid #ffeeba;">
+                            <strong style="color:var(--danger);">[重要]</strong> ${window.escapeHTML(notice.text)}
+                        </div>`;
+                    }
+                });
+
+                if (hasNotice) { container.style.display = 'block'; } 
+                else { container.style.display = 'none'; }
+            });
+        }
 
             // 🌟 監聽特別事項通知
             onSnapshot(collection(db, "notices"), (snapshot) => {
