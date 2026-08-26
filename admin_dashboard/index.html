@@ -12,6 +12,13 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
         .sidebar { width: 250px; background-color: var(--sidebar); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100;}
         .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #404850; text-align: center; letter-spacing: 1px; }
+
+        /* 🌟 各部門子選單彈出樣式 */
+        .dept-submenu { display: none; position: absolute; left: 250px; top: 0; background-color: #2c3338; box-shadow: 4px 4px 15px rgba(0,0,0,0.3); width: 210px; z-index: 1001; border-radius: 0 8px 8px 0; border-left: 3px solid var(--primary); padding: 0; }
+        .dept-submenu.active { display: block; animation: fadeInRight 0.2s; }
+        .dept-submenu-item { padding: 15px 20px; color: white; cursor: pointer; transition: 0.2s; font-size: 14px; border-bottom: 1px solid #3a4248; display: block; }
+        .dept-submenu-item:hover { background-color: var(--primary); }
+        @keyframes fadeInRight { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
         .nav-menu { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
         .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #3a4248; transition: 0.2s; display: flex; align-items: center; gap: 10px; font-size: 15px; }
         .nav-item:hover, .nav-item.active { background-color: var(--primary); color: white; }
@@ -124,10 +131,19 @@
             <li class="nav-item" onclick="window.openManualIssueModal()">📝 手動派發工單</li>
             <li class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢 特別事項通知發布</li>
             <li class="nav-item" onclick="window.switchAdminView('view-assistant', this)">🔔 物業助理需求通知</li>
-            <li class="nav-item" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</li>
-            <li class="nav-item" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</li>
-            <li class="nav-item" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</li>
             <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
+            <!-- 🌟 整合後的部門系統入口 -->
+            <li class="nav-item" onclick="window.toggleDeptMenu(event)" style="position: relative; justify-content: space-between; overflow: visible;">
+                <div style="display:flex; align-items:center; gap:10px;">🚪 各部門系統入口</div>
+                <span id="deptArrow" style="font-size: 12px; transition: 0.2s;">▶</span>
+                
+                <!-- 彈出在旁邊的子選單 -->
+                <div id="deptSubMenu" class="dept-submenu">
+                    <div class="dept-submenu-item" onclick="event.stopPropagation(); window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</div>
+                    <div class="dept-submenu-item" onclick="event.stopPropagation(); window.open('../engineering/', '_blank')">🔧 工程部派單後台</div>
+                    <div class="dept-submenu-item" onclick="event.stopPropagation(); window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</div>
+                </div>
+            </li>
         </ul>
         <div style="padding: 20px; font-size: 12px; color: #888; text-align: center;"><p>系統版本 v13.6 (響應防護版)</p></div>
     </div>
@@ -649,11 +665,39 @@
             e.stopPropagation();
             document.getElementById('profileMenu').classList.toggle('active');
         };
+
+        // 🌟 部門選單彈出邏輯
+        window.toggleDeptMenu = function(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('deptSubMenu');
+            const arrow = document.getElementById('deptArrow');
+            menu.classList.toggle('active');
+            
+            // 箭頭旋轉動畫
+            if (menu.classList.contains('active')) {
+                arrow.style.transform = 'rotate(90deg)';
+            } else {
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        };
+
+        // 🌟 點擊畫面空白處，自動關閉所有下拉與彈出選單
         window.closeProfileMenu = function(e) {
+            // 關閉右上角個人選單
             if (!e.target.matches('.profile-trigger')) {
                 const dropdowns = document.getElementsByClassName("profile-dropdown-content");
                 for (let i = 0; i < dropdowns.length; i++) {
                     if (dropdowns[i].classList.contains('active')) dropdowns[i].classList.remove('active');
+                }
+            }
+            
+            // 關閉左側部門子選單
+            if (!e.target.closest('.nav-item')) {
+                const deptMenu = document.getElementById('deptSubMenu');
+                const arrow = document.getElementById('deptArrow');
+                if (deptMenu && deptMenu.classList.contains('active')) {
+                    deptMenu.classList.remove('active');
+                    if (arrow) arrow.style.transform = 'rotate(0deg)';
                 }
             }
         };
@@ -1987,17 +2031,32 @@
                     return;
                 }
                 
-                // 渲染工單資料到表格中
+               // 渲染工單資料到表格中
                 orders.forEach(order => {
-                    const statusClass = order.status === '已完成' ? 'badge-success' : 'badge-warning';
-                    const statusBadge = `<span class="badge ${statusClass}">${window.escapeHTML(order.status || '待處理')}</span>`;
+                    let statusClass = 'badge-warning'; // 待處理
+                    let statusText = order.status || '待處理';
+                    if (order.status === '已完成') statusClass = 'badge-success';
+                    else if (order.status === '跟進中') statusClass = 'badge-info';
                     
+                    let statusBadge = `<span class="badge ${statusClass}">${window.escapeHTML(statusText)}</span>`;
+                    
+                    // 🌟 新增 1：顯示接單或完成處理的人員名字
+                    const personName = order.completer || order.assignee;
+                    if ((order.status === '跟進中' || order.status === '已完成') && personName) {
+                        statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
+                    }
+
                     const safeRef = window.escapeHTML(order.refNumber);
                     const safeDept = window.escapeHTML(order.department);
                     const safeLoc = window.escapeHTML(order.location);
-                    const safeDesc = window.escapeHTML(order.description || '無文字說明');
+                    let safeDesc = window.escapeHTML(order.description || '無文字說明');
                     
-                    // 🌟 修改 2：抓取發單人名稱 (優先抓 dispatcherName，若無則抓 reporter)
+                    // 🌟 新增 2：如果有結案備註，優雅地顯示在說明文字的下方
+                    if (order.status === '已完成' && order.completionRemark) {
+                        safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
+                    }
+
+                    // 抓取發單人名稱 (優先抓 dispatcherName，若無則抓 reporter)
                     const safeDispatcher = window.escapeHTML(order.dispatcherName || order.reporter || '系統/未知');
                     
                     tbody.innerHTML += `
@@ -2012,15 +2071,10 @@
                             </td>
                             <td style="padding:10px; font-size:12px;">${safeDesc}</td>
                             <td style="padding:10px; font-size:12px; color:#666;">${window.escapeHTML(order.dispatchTime)}</td>
-                            <td style="padding:10px;">${statusBadge}</td>
+                            <td style="padding:10px; text-align:center;">${statusBadge}</td>
                         </tr>
                     `;
                 });
-            } catch (error) {
-                console.error("讀取工單失敗:", error);
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>';
-            }
-        };
     </script>
 </body>
 </html>
