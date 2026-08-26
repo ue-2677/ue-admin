@@ -128,12 +128,13 @@
                         <tr>
                             <th style="padding:10px; border-bottom:1px solid #ddd;">單號 / 部門</th>
                             <th style="padding:10px; border-bottom:1px solid #ddd;">地點</th>
-                            <th style="padding:10px; border-bottom:1px solid #ddd; width:35%;">說明</th>
+                            <th style="padding:10px; border-bottom:1px solid #ddd; width:30%;">說明</th>
+                            <th style="padding:10px; border-bottom:1px solid #ddd;">派發時間</th>
                             <th style="padding:10px; border-bottom:1px solid #ddd;">狀態</th>
                         </tr>
                     </thead>
                     <tbody id="issuedWorkOrdersTableBody">
-                        <tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">載入中...</td></tr>
+                        <tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -169,6 +170,15 @@
                 const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
                 return charsToReplace[tag] || tag;
             });
+        };
+        
+        // 🌟 核心優化：統一本地時間處理，避免 UTC 時差導致單號日期變成昨天
+        window.getLocalDateStr = function(withDash = false) {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return withDash ? `${y}-${m}-${day}` : `${y}${m}${day}`;
         };
         
         let userDocListener = null;
@@ -317,7 +327,7 @@
             const btn = document.getElementById('submitBtn');
             const msg = document.getElementById('statusMsg');
             btn.disabled = true; btn.innerText = "⏳ 傳送中...";
-            const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+            const dateStr = window.getLocalDateStr(false); // 🌟 改用本地時間
         
             try {
                 const q = query(collection(db, "workOrders"), where("department", "==", dept));
@@ -438,23 +448,35 @@
                     
                     let statusBadge = `<span style="display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:bold; background-color:${statusClass==='badge-success'?'#d4edda':(statusClass==='badge-info'?'#cce5ff':'#fff3cd')}; color:${statusClass==='badge-success'?'#155724':(statusClass==='badge-info'?'#004085':'#856404')};">${window.escapeHTML(statusText)}</span>`;
                     
+                    // 🌟 新增：顯示接單或完成處理的人員名字
+                    const personName = order.completer || order.assignee;
+                    if ((order.status === '跟進中' || order.status === '已完成') && personName) {
+                        statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
+                    }
+
                     const safeRef = window.escapeHTML(order.refNumber);
                     const safeDept = window.escapeHTML(order.department);
                     const safeLoc = window.escapeHTML(order.location);
-                    const safeDesc = window.escapeHTML(order.description || '無文字說明');
+                    let safeDesc = window.escapeHTML(order.description || '無文字說明');
+                    
+                    // 🌟 新增：如果有結案備註，顯示在說明的下方
+                    if (order.status === '已完成' && order.completionRemark) {
+                        safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
+                    }
                     
                     tbody.innerHTML += `
                         <tr style="border-bottom: 1px solid #eee;">
                             <td style="padding:10px;"><strong>${safeRef}</strong><br><span style="font-size:11px; color:#888;">${safeDept}</span></td>
                             <td style="padding:10px; color:var(--primary); font-weight:bold;">${safeLoc}</td>
                             <td style="padding:10px; font-size:12px;">${safeDesc}</td>
+                            <td style="padding:10px; font-size:12px; color:#666;">${window.escapeHTML(order.dispatchTime)}</td>
                             <td style="padding:10px;">${statusBadge}</td>
                         </tr>
                     `;
                 });
             } catch (error) {
                 console.error("讀取工單失敗:", error);
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>';
             }
         };
     </script>
