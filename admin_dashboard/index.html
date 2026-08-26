@@ -1989,11 +1989,8 @@
                     orders.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // 過濾出轉派出去的工單 (排除物業助理的需求)
-                orders = orders.filter(o => 
-                    (o.department === '工程部' || o.department === '清潔部') && 
-                    o.dispatcherUsername === currentUser.username
-                );
+                // 過濾出轉派出去的工單
+                orders = orders.filter(o => o.dispatcherUsername === currentUser.username);
                 
                 // 根據單號(包含日期)進行反向排序 (最新的在最上面)
                 orders.sort((a, b) => (b.refNumber || "").localeCompare(a.refNumber || ""));
