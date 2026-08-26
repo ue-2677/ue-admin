@@ -1034,8 +1034,11 @@
                 else if (order.status === '跟進中') statusClass = 'badge-info';
                 
                 let statusBadge = `<span class="badge ${statusClass}">${statusText}</span>`;
-                if (order.status === '跟進中' && order.assignee) {
-                    statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(order.assignee)}</span>`;
+                
+                // 🌟 修正：不只「跟進中」，「已完成」也要顯示負責人的名字
+                const personName = order.completer || order.assignee;
+                if ((order.status === '跟進中' || order.status === '已完成') && personName) {
+                    statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
                 }
 
                 const photoHtml = order.photo ? `<div style="margin-top:6px;"><img src="${order.photo}" onclick="window.openImageModal('${order.photo}')" style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer; transition:0.2s;" onmouseover="this.style.opacity=0.7" title="點擊放大"></div>` : '';
@@ -1088,7 +1091,12 @@
             if (withRemark && !remark) { alert("請輸入備註內容，或選擇「直接完成」。"); return; }
             
             try {
-                let payload = { status: '已完成', completeTime: new Date().toLocaleString() };
+                // 🌟 修正：結案時一併記錄是「誰」完成的
+                let payload = { 
+                    status: '已完成', 
+                    completeTime: new Date().toLocaleString(),
+                    completer: currentUser.name || currentUser.username
+                };
                 if (withRemark) payload.completionRemark = remark;
                 
                 await updateDoc(doc(db, "workOrders", id), payload);
@@ -1989,10 +1997,6 @@
                     orders.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // 過濾出轉派出去的工單
-                orders = orders.filter(o => o.dispatcherUsername === currentUser.username);
-                
-                // 根據單號(包含日期)進行反向排序 (最新的在最上面)
                 orders.sort((a, b) => (b.refNumber || "").localeCompare(a.refNumber || ""));
                 
                 tbody.innerHTML = '';
@@ -2012,10 +2016,19 @@
                     const safeLoc = window.escapeHTML(order.location);
                     const safeDesc = window.escapeHTML(order.description || '無文字說明');
                     
+                    // 🌟 修改 2：抓取發單人名稱 (優先抓 dispatcherName，若無則抓 reporter)
+                    const safeDispatcher = window.escapeHTML(order.dispatcherName || order.reporter || '系統/未知');
+                    
                     tbody.innerHTML += `
                         <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding:10px;"><strong>${safeRef}</strong><br><span style="font-size:11px; color:#888;">${safeDept}</span></td>
-                            <td style="padding:10px; color:var(--primary); font-weight:bold;">${safeLoc}</td>
+                            <td style="padding:10px;">
+                                <strong>${safeRef}</strong><br>
+                                <span style="font-size:11px; color:#888;">${safeDept}</span>
+                            </td>
+                            <td style="padding:10px; color:var(--primary); font-weight:bold;">
+                                ${safeLoc}<br>
+                                <span style="font-size:11px; color:#6f42c1; font-weight:bold;">發單: ${safeDispatcher}</span>
+                            </td>
                             <td style="padding:10px; font-size:12px;">${safeDesc}</td>
                             <td style="padding:10px; font-size:12px; color:#666;">${window.escapeHTML(order.dispatchTime)}</td>
                             <td style="padding:10px;">${statusBadge}</td>
