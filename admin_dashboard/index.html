@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="../common.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大樓巡邏系統 - 雲端電腦後台</title>
     <!-- 引入 html2pdf 庫，用於匯出 PDF 功能 -->
@@ -621,48 +622,28 @@
     </div>
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, setDoc, query, orderBy, getDocs, where, getDoc } 
+        // 🌟 1. 從上一層的共用檔案中「匯入」設定與工具
+        import { db, auth, secondaryAuth, escapeHTML, getLocalDateStr } from '../firebase-config.js';
+        
+        // 🌟 2. 匯入你需要用到的 Firestore 與 Auth 功能 (不包含 initializeApp)
+        import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, setDoc, query, orderBy, getDocs, where, getDoc } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+        import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
-            authDomain: "test-ue-app.firebaseapp.com",
-            projectId: "test-ue-app",
-            storageBucket: "test-ue-app.firebasestorage.app",
-            messagingSenderId: "203707145209",
-            appId: "1:203707145209:web:647068d7d0e4b843b47b28"
-        };
+        // 🌟 3. 將工具函數綁定到 window 上，這樣 HTML 裡的 onclick 才能正常呼叫
+        window.escapeHTML = escapeHTML;
+        window.getLocalDateStr = getLocalDateStr;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-        const secondaryAuth = getAuth(secondaryApp);
-
+        // 🌟 4. 下面這些是本頁專用變數，必須保留！
         let dbUsers = {}; let dbRoutes = []; let dbPoints = []; let dbUidMappings = {};
         let dbTasks = []; let dbAssistantRequests = []; let dbNotices = [];
         let currentUser = null; const VIRTUAL_DOMAIN = "@patrol.com";
 
-        window.escapeHTML = function(str) {
-            if (str === null || str === undefined) return '';
-            return String(str).replace(/[&<>'"]/g, function(tag) {
-                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
-                return charsToReplace[tag] || tag;
-            });
-        };
-
-        // 🌟 核心優化：統一本地時間處理，避免使用 toISOString() 造成的 UTC 時區偏差
-        window.getLocalDateStr = function(withDash = false) {
-            const d = new Date();
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return withDash ? `${y}-${m}-${day}` : `${y}${m}${day}`;
-        };
-
+        // ==========================================
+        // 接下來就順順地接續你原本的程式碼...
+        // ==========================================
+        
         // 🌟 個人選單關閉邏輯
         window.toggleProfileMenu = function(e) {
             e.stopPropagation();
