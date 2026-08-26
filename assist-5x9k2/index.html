@@ -448,7 +448,7 @@
                     
                     let statusBadge = `<span style="display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:bold; background-color:${statusClass==='badge-success'?'#d4edda':(statusClass==='badge-info'?'#cce5ff':'#fff3cd')}; color:${statusClass==='badge-success'?'#155724':(statusClass==='badge-info'?'#004085':'#856404')};">${window.escapeHTML(statusText)}</span>`;
                     
-                    // 🌟 新增：顯示接單或完成處理的人員名字
+                    // 🌟 新增 1：在狀態標籤下方，顯示「跟進中」或「已完成」的人員名字
                     const personName = order.completer || order.assignee;
                     if ((order.status === '跟進中' || order.status === '已完成') && personName) {
                         statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
@@ -459,7 +459,7 @@
                     const safeLoc = window.escapeHTML(order.location);
                     let safeDesc = window.escapeHTML(order.description || '無文字說明');
                     
-                    // 🌟 新增：如果有結案備註，顯示在說明的下方
+                    // 🌟 新增 2：如果有結案備註，優雅地顯示在說明文字的下方
                     if (order.status === '已完成' && order.completionRemark) {
                         safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
                     }
@@ -469,8 +469,7 @@
                             <td style="padding:10px;"><strong>${safeRef}</strong><br><span style="font-size:11px; color:#888;">${safeDept}</span></td>
                             <td style="padding:10px; color:var(--primary); font-weight:bold;">${safeLoc}</td>
                             <td style="padding:10px; font-size:12px;">${safeDesc}</td>
-                            <td style="padding:10px; font-size:12px; color:#666;">${window.escapeHTML(order.dispatchTime)}</td>
-                            <td style="padding:10px;">${statusBadge}</td>
+                            <td style="padding:10px; text-align:center;">${statusBadge}</td>
                         </tr>
                     `;
                 });
