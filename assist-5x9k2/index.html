@@ -145,43 +145,28 @@
         </div>
     </div>
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // 🌟 1. 從上一層的共用檔案中「匯入」設定與工具
+        import { db, auth, escapeHTML, getLocalDateStr } from '../firebase-config.js';
         
-        const firebaseConfig = {
-            apiKey: "AIzaSyBq4EKFQ3gjq1kpOWMH5MXosF7O9ENOrjw",
-            authDomain: "test-ue-app.firebaseapp.com",
-            projectId: "test-ue-app",
-            storageBucket: "test-ue-app.firebasestorage.app",
-            messagingSenderId: "203707145209",
-            appId: "1:203707145209:web:647068d7d0e4b843b47b28"
-        };
+        // 🌟 2. 匯入本頁需要的 Firestore 與 Auth 功能 (不包含 initializeApp)
+        import { collection, addDoc, updateDoc, getDocs, query, where, doc, getDoc, onSnapshot } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+        // 🌟 3. 將共用工具函數綁定到 window 上，這樣 HTML 裡的 onclick 才能正常呼叫
+        window.escapeHTML = escapeHTML;
+        window.getLocalDateStr = getLocalDateStr;
+
+        // 🌟 4. 下面這些是本頁「物業助理」專用的變數，必須保留！
         let currentUser = null;
         let currentPhotoBase64 = "";
-
-        window.escapeHTML = function(str) {
-            if (str === null || str === undefined) return '';
-            return String(str).replace(/[&<>'"]/g, function(tag) {
-                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
-                return charsToReplace[tag] || tag;
-            });
-        };
-        
-        // 🌟 核心優化：統一本地時間處理，避免 UTC 時差導致單號日期變成昨天
-        window.getLocalDateStr = function(withDash = false) {
-            const d = new Date();
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return withDash ? `${y}-${m}-${day}` : `${y}${m}${day}`;
-        };
         
         let userDocListener = null;
+
+        // ==========================================
+        // 接下來就順順地接續你原本的登入驗證程式碼...
+        // ==========================================
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
