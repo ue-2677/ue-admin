@@ -120,6 +120,7 @@
             <li class="nav-item active" onclick="window.switchAdminView('view-dashboard', this)">📊 即時儀表板</li>
             <li class="nav-item" onclick="window.switchAdminView('view-management', this)">🗺️ 路線與點位管理</li>
             <li class="nav-item" onclick="window.switchAdminView('view-users', this)">👥 人員與權限管理</li>
+            <li class="nav-item" onclick="window.openManualIssueModal()">📝 手動派發工單</li>
             <li class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢 特別事項通知發布</li>
             <li class="nav-item" onclick="window.switchAdminView('view-assistant', this)">🔔 物業助理需求通知</li>
             <li class="nav-item" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</li>
@@ -148,6 +149,8 @@
             <h2 id="topbarTitle">總覽儀表板 <span class="pc-only" style="font-size: 12px; color: var(--success); font-weight: normal; margin-left: 10px;">🟢 即時連線中</span></h2>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <span id="clock" class="pc-only" style="font-size: 14px; color: #666;"></span>
+                <button class="btn btn-primary pc-only" style="padding: 6px 12px; font-size: 13px; margin:0;" onclick="window.openManualIssueModal()">📝 快速發單</button>
+                
                 <button class="btn btn-success pc-only" style="padding: 6px 12px; font-size: 13px; margin:0;" onclick="window.refreshCurrentView()">🔄 刷新</button>
                 
                 <!-- 🌟 新增：個人下拉選單 -->
