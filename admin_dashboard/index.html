@@ -666,7 +666,7 @@
             document.getElementById('profileMenu').classList.toggle('active');
         };
         window.closeProfileMenu = function(e) {
-            if (!event.target.matches('.profile-trigger')) {
+            if (!e.target.matches('.profile-trigger')) {
                 const dropdowns = document.getElementsByClassName("profile-dropdown-content");
                 for (let i = 0; i < dropdowns.length; i++) {
                     if (dropdowns[i].classList.contains('active')) dropdowns[i].classList.remove('active');
@@ -730,7 +730,8 @@
 
                             // 🌟 判斷螢幕寬度決定初始畫面
                             if (window.innerWidth <= 768) {
-                                window.switchAdminView('view-mobile-home', document.querySelector('.mobile-bottom-nav .nav-item'));
+                                // 修正：精準抓取第二個 [1]「各部連結」按鈕，避免抓到「發單」
+                                window.switchAdminView('view-mobile-home', document.querySelectorAll('.mobile-bottom-nav .nav-item')[1]);
                             } else {
                                 window.switchAdminView('view-dashboard', document.querySelector('.sidebar .nav-item.active'));
                             }
@@ -757,17 +758,56 @@
             }
         };
 
+        // 🌟 1. 系統音效與原生推播通知函數
+        window.playAlertSound = function() {
+            // 使用簡短的提示音效
+            const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+            audio.play().catch(e => console.log("音效可能被瀏覽器阻擋", e));
+        };
+
+        window.showSystemNotification = function(title, body) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827370.png' });
+            }
+        };
+
+        let isInitialLoad = true; // 🌟 宣告初始載入鎖，避免剛登入時舊單狂叫
+
         function initRealtimeListeners() {
+            // 🌟 2. 啟動監聽時，順便向瀏覽器請求推播權限
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+
             onSnapshot(query(collection(db, "notices"), orderBy("createdAt", "desc")), (snapshot) => {
               dbNotices = []; snapshot.forEach(doc => { dbNotices.push({ id: doc.id, ...doc.data() }); });
               if(document.getElementById('view-notices').classList.contains('active')) window.loadNoticesData();
             });
+
             onSnapshot(query(collection(db, "workOrders"), where("department", "==", "管理部")), (snapshot) => {
                 dbAssistantRequests = []; 
                 snapshot.forEach(doc => { dbAssistantRequests.push({ id: doc.id, ...doc.data() }); });
                 if(document.getElementById('view-assistant').classList.contains('active')) window.loadAssistantRequests();
-                window.updateAssistantBadge(); // 🌟 新增：更新小紅點
+                window.updateAssistantBadge(); // 更新小紅點
+
+                // 🌟 3. 處理新工單的推播通知
+                if (!isInitialLoad) {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added") {
+                            const data = change.doc.data();
+                            // 避免自己發的手動單吵到自己
+                            if (data.dispatcherUsername !== currentUser.username) {
+                                window.playAlertSound();
+                                window.showSystemNotification("🔔 收到新助理需求", `地點: ${data.location}\n說明: ${data.description}`);
+                            }
+                        }
+                    });
+                }
             });
+
+            // 🌟 3秒後解除初始載入鎖定，之後來的新單才會叫
+            setTimeout(() => { isInitialLoad = false; }, 3000);
+
             onSnapshot(collection(db, "users"), (snapshot) => {
                 dbUsers = {}; snapshot.forEach(doc => { dbUsers[doc.id] = doc.data(); });
                 if(document.getElementById('view-users').classList.contains('active')) window.loadUsersData();
