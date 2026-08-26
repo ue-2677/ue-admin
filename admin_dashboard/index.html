@@ -2022,16 +2022,20 @@
                     orders.push({ id: doc.id, ...doc.data() });
                 });
                 
+                // 🌟 修正補回：只顯示自己發出的單 (避免看到全棟的單)
+                orders = orders.filter(o => o.dispatcherUsername === currentUser.username);
+                
+                // 根據單號(包含日期)進行反向排序 (最新的在最上面)
                 orders.sort((a, b) => (b.refNumber || "").localeCompare(a.refNumber || ""));
                 
                 tbody.innerHTML = '';
                 
                 if (orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">目前沒有發出的工單紀錄。</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">您目前沒有發出的工單紀錄。</td></tr>';
                     return;
                 }
                 
-               // 渲染工單資料到表格中
+                // 渲染工單資料到表格中
                 orders.forEach(order => {
                     let statusClass = 'badge-warning'; // 待處理
                     let statusText = order.status || '待處理';
@@ -2040,7 +2044,7 @@
                     
                     let statusBadge = `<span class="badge ${statusClass}">${window.escapeHTML(statusText)}</span>`;
                     
-                    // 🌟 新增 1：顯示接單或完成處理的人員名字
+                    // 🌟 功能 1：顯示接單或完成處理的人員名字
                     const personName = order.completer || order.assignee;
                     if ((order.status === '跟進中' || order.status === '已完成') && personName) {
                         statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
@@ -2051,12 +2055,12 @@
                     const safeLoc = window.escapeHTML(order.location);
                     let safeDesc = window.escapeHTML(order.description || '無文字說明');
                     
-                    // 🌟 新增 2：如果有結案備註，優雅地顯示在說明文字的下方
+                    // 🌟 功能 2：如果有結案備註，優雅地顯示在說明文字的下方
                     if (order.status === '已完成' && order.completionRemark) {
                         safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
                     }
 
-                    // 抓取發單人名稱 (優先抓 dispatcherName，若無則抓 reporter)
+                    // 功能 3：抓取發單人名稱
                     const safeDispatcher = window.escapeHTML(order.dispatcherName || order.reporter || '系統/未知');
                     
                     tbody.innerHTML += `
@@ -2075,7 +2079,8 @@
                         </tr>
                     `;
                 });
-                // 👇 補上丟失的 try...catch 結尾與函數的括號 👇
+                
+            // 👇 這是你原本漏掉的結尾括號與錯誤處理 👇
             } catch (error) {
                 console.error("讀取工單失敗:", error);
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>';
