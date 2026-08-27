@@ -1453,8 +1453,9 @@
                     const safeIncText = inc.text ? window.escapeHTML(inc.text) : '<span style="color:#aaa;">無文字說明</span>';
 
                     html += `
-                    <div style="border:1px solid #f5c6cb; background:#fdfdfe; padding:15px; border-radius:6px; margin-bottom:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+<!-- 🌟 加入 avoid-break 類別與樣式 -->
+                        <div class="avoid-break" style="page-break-inside: avoid; border:1px solid #f5c6cb; background:#fdfdfe; padding:15px; border-radius:6px; margin-bottom:15px;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <p style="margin:0 0 8px 0; font-size:14px;"><strong>📍 回報地點：</strong>${safePointName}</p>
                             <span style="color:#888; font-size:12px;">⏰ ${inc.timeStr}</span>
                         </div>
@@ -1481,25 +1482,40 @@
         };
 
         window.exportTaskToPDF = function() {
-            const exportArea = document.getElementById('taskExportArea');
-            const tableContainer = document.getElementById('taskTableContainer');
-            const rawTitle = document.getElementById('taskDetailTitle').innerText.replace(/[\/\\?%*:|"<>]/g, '-');
-            
-            const originalMaxHeight = tableContainer ? tableContainer.style.maxHeight : '';
-            const originalOverflowY = tableContainer ? tableContainer.style.overflowY : '';
-            if (tableContainer) { tableContainer.style.maxHeight = 'none'; tableContainer.style.overflowY = 'visible'; }
+    const exportArea = document.getElementById('taskExportArea');
+    const tableContainer = document.getElementById('taskTableContainer');
+    const rawTitle = document.getElementById('taskDetailTitle').innerText.replace(/[\/\\?%*:|"<>]/g, '-');
+    
+    const originalMaxHeight = tableContainer ? tableContainer.style.maxHeight : '';
+    const originalOverflowY = tableContainer ? tableContainer.style.overflowY : '';
+    
+    // 取消卷軸與高度限制，確保完整匯出
+    if (tableContainer) { 
+        tableContainer.style.maxHeight = 'none'; 
+        tableContainer.style.overflowY = 'visible'; 
+    }
 
-            const buttonsToHide = exportArea.querySelectorAll('.pdf-hide-btn');
-            buttonsToHide.forEach(btn => btn.style.display = 'none');
+    const buttonsToHide = exportArea.querySelectorAll('.pdf-hide-btn');
+    buttonsToHide.forEach(btn => btn.style.display = 'none');
 
-            html2pdf().set({
-                margin: 10, filename: `${rawTitle}_報表.pdf`, image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).from(exportArea).save().then(() => {
-                if (tableContainer) { tableContainer.style.maxHeight = originalMaxHeight; tableContainer.style.overflowY = originalOverflowY; }
-                buttonsToHide.forEach(btn => btn.style.display = 'block');
-            });
-        };
+    // 🌟 核心修改：加入 pagebreak 設定
+    html2pdf().set({
+        margin: [10, 10, 15, 10], // 上, 右, 下, 左 的邊距 (留一點底部空間)
+        filename: `${rawTitle}_報表.pdf`, 
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true }, 
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        // 👇 加入這行，明確告訴套件不要切斷 table row (tr) 以及帶有 .avoid-break 的區塊
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break'] }
+    }).from(exportArea).save().then(() => {
+        // 匯出後復原原本的樣式
+        if (tableContainer) { 
+            tableContainer.style.maxHeight = originalMaxHeight; 
+            tableContainer.style.overflowY = originalOverflowY; 
+        }
+        buttonsToHide.forEach(btn => btn.style.display = 'block');
+    });
+};
 
         window.currentDispatchData = null;
         window.openDispatchModal = function(taskId, incidentIndex) {
@@ -2086,6 +2102,12 @@
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>';
             }
         };
+            tr {
+                page-break-inside: avoid !important;
+            }
+            .avoid-break {
+                page-break-inside: avoid !important;
+            }
     </script>
 </body>
 </html>
