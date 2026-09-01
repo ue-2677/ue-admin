@@ -7,6 +7,7 @@
     <title>大樓巡邏系統 - 雲端電腦後台</title>
     <!-- 引入 html2pdf 庫，用於匯出 PDF 功能 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <style>
         :root { --primary: #1a73e8; --bg: #f4f6f9; --text: #333; --sidebar: #2c3338; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --info: #17a2b8;}
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
@@ -211,19 +212,32 @@
                 
                 <div class="card">
                     <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
-                        <h3 style="margin: 0;">🛡️ 巡邏任務即時監控列表</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0;">🛡️ 巡邏任務即時監控列表</h3>
+                            <!-- 🌟 新增：批次匯出按鈕 -->
+                            <button id="batchExportBtn" class="btn btn-info" style="margin:0;" onclick="window.batchExportTasks()">📥 批次合併匯出勾選報表</button>
+                        </div>
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
                             <div style="flex: 1; min-width: 140px;">
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
                                 <input type="text" id="taskFilterKeyword" class="form-control" placeholder="保全姓名、路線名稱..." onkeyup="window.applyTaskFilters()" style="padding: 8px;">
                             </div>
-                            <div style="flex: 1; min-width: 130px;">
+                            <div style="flex: 1; min-width: 120px;">
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
                                 <input type="date" id="taskFilterStartDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
                             </div>
-                            <div style="flex: 1; min-width: 130px;">
+                            <div style="flex: 1; min-width: 120px;">
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
                                 <input type="date" id="taskFilterEndDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
+                            </div>
+                            <!-- 🌟 新增：狀態篩選下拉選單 -->
+                            <div style="flex: 1; min-width: 110px;">
+                                <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 任務狀態</label>
+                                <select id="taskFilterStatus" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
+                                    <option value="all">全部狀態</option>
+                                    <option value="completed">✅ 已完成</option>
+                                    <option value="incomplete">⏳ 執行中</option>
+                                </select>
                             </div>
                             <div style="display: flex; align-items: flex-end; margin-top: 18px;">
                                 <button class="btn btn-secondary" onclick="window.clearTaskFilters()" style="padding: 9px 15px; margin:0;">🔄 重設</button>
@@ -233,9 +247,11 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 18%;">路線名稱</th>
+                                <!-- 🌟 新增：全選框 -->
+                                <th style="width: 4%; text-align: center;"><input type="checkbox" id="selectAllTasks" onclick="window.toggleAllTasks(this)" style="transform: scale(1.3); cursor: pointer;"></th>
+                                <th style="width: 16%;">路線名稱</th>
                                 <th style="width: 12%;">巡邏人員</th>
-                                <th style="width: 20%;">實際開始時間</th>
+                                <th style="width: 18%;">實際開始時間</th>
                                 <th style="width: 10%;">進度</th>
                                 <th style="width: 20%;">異常狀態</th>
                                 <th style="width: 10%;">狀態</th>
@@ -444,6 +460,14 @@
     <div id="taskDetailModal" class="modal">
         <div class="modal-content" style="width: 800px;">
             <h3 id="taskDetailTitle">任務詳細資訊</h3>
+            
+            <!-- 🌟 新增：封面 PDF 選擇區塊 -->
+            <div style="margin-bottom: 15px; padding: 12px; background: #e8f0fe; border-radius: 8px; border: 1px solid #d2e3fc;">
+                <label style="font-size: 14px; font-weight: bold; color: var(--primary); display:block; margin-bottom:5px;">📎 附加自訂封面 PDF (可選擇多個檔案)</label>
+                <input type="file" id="coverPdfInput" accept=".pdf" multiple class="form-control" style="background: white; padding: 6px;">
+                <small style="color:#666;">點擊下方匯出時，選取的 PDF 將會自動與報表合併，並放在最前面。</small>
+            </div>
+
             <div id="taskExportArea">
                 <div id="taskDetailContent"></div>
             </div>
@@ -1229,31 +1253,22 @@
             });
         };
 
-        window.applyTaskFilters = function() { window.loadDashboardData(); };
+   window.applyTaskFilters = function() { window.loadDashboardData(); };
         window.clearTaskFilters = function() {
             document.getElementById('taskFilterKeyword').value = '';
             document.getElementById('taskFilterStartDate').value = '';
             document.getElementById('taskFilterEndDate').value = '';
+            document.getElementById('taskFilterStatus').value = 'all';
+            if(document.getElementById('selectAllTasks')) document.getElementById('selectAllTasks').checked = false;
             window.loadDashboardData();
         };
 
-        window.routeSortState = { col: 'order', desc: false };
-        window.pointSortState = { col: 'floor', desc: false };
-        window.applyRouteFilter = function() { window.loadRoutesData(); };
-        window.applyPointFilter = function() { window.loadPointsData(); };
-
-        window.sortRoutes = function(col) {
-            if (window.routeSortState.col === col) window.routeSortState.desc = !window.routeSortState.desc;
-            else { window.routeSortState.col = col; window.routeSortState.desc = false; }
-            window.loadRoutesData();
+        // 🌟 新增：全選與取消全選邏輯
+        window.toggleAllTasks = function(source) {
+            document.querySelectorAll('.task-checkbox').forEach(chk => { chk.checked = source.checked; });
         };
 
-        window.sortPoints = function(col) {
-            if (window.pointSortState.col === col) window.pointSortState.desc = !window.pointSortState.desc;
-            else { window.pointSortState.col = col; window.pointSortState.desc = false; }
-            window.loadPointsData();
-        };
-
+        // 🌟 更新：載入監控列表 (加入狀態篩選與 Checkbox)
         window.loadDashboardData = function() {
             const tbody = document.getElementById('taskTableBody'); 
             if (!tbody) return;
@@ -1274,11 +1289,16 @@
             const keyword = document.getElementById('taskFilterKeyword') ? document.getElementById('taskFilterKeyword').value.toLowerCase().trim() : '';
             const startDateRaw = document.getElementById('taskFilterStartDate') ? document.getElementById('taskFilterStartDate').value : '';
             const endDateRaw = document.getElementById('taskFilterEndDate') ? document.getElementById('taskFilterEndDate').value : '';
+            const statusFilter = document.getElementById('taskFilterStatus') ? document.getElementById('taskFilterStatus').value : 'all';
             
             const startDate = startDateRaw ? startDateRaw.replace(/-/g, '') : '00000000';
             const endDate = endDateRaw ? endDateRaw.replace(/-/g, '') : '99999999';
 
             let filteredTasks = dbTasks.filter(task => {
+                if (statusFilter !== 'all') {
+                    if (statusFilter === 'completed' && task.status !== 'completed') return false;
+                    if (statusFilter === 'incomplete' && task.status === 'completed') return false;
+                }
                 if (keyword) {
                     const searchStr = `${task.guardName} ${task.routeName} ${task.status}`.toLowerCase();
                     if (!searchStr.includes(keyword)) return false;
@@ -1295,7 +1315,7 @@
             });
 
             if (filteredTasks.length === 0) { 
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999; padding:20px;">目前尚無符合條件的任務紀錄。</td></tr>'; 
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999; padding:20px;">目前尚無符合條件的任務紀錄。</td></tr>'; 
                 return;
             }
 
@@ -1319,16 +1339,297 @@
                      actualStartTimeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} (建立)`;
                 }
 
+                // 🌟 加入 Checkbox 供批次選取
                 tbody.innerHTML += `<tr>
+                    <td style="text-align: center;"><input type="checkbox" class="task-checkbox" value="${task.id}" style="transform: scale(1.3); cursor: pointer;"></td>
                     <td><strong>${window.escapeHTML(task.routeName)}</strong></td>
                     <td>${window.escapeHTML(task.guardName || '未登記')}</td>
                     <td style="font-family:monospace; color:#555;">${actualStartTimeStr}</td>
                     <td>${Math.min(task.currentPointIndex || 0, (task.points || []).length)} / ${(task.points || []).length}</td>
                     <td>${alertBadge}</td>
                     <td>${statusBadge}</td>
-                    <td><button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;" onclick="window.viewTaskDetail('${task.id}')">🔍 查看報表</button></td>
+                    <td><button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px; margin:0;" onclick="window.viewTaskDetail('${task.id}')">🔍 查看</button></td>
                 </tr>`;
             });
+        };
+
+        // 🌟 核心：將報表 HTML 產生邏輯獨立出來，供單一和批次匯出共用
+        window.buildTaskReportHtml = function(task) {
+            const routeDef = dbRoutes.find(r => r.name === task.routeName);
+            const logs = task.pointLogs || [];
+            const incidents = task.incidents || [];
+            
+            let trueStartTimeHtml = '<span style="color:#999; font-size:12px;">尚未開始</span>';
+            let totalTimeHtml = '<span style="color:#999; font-size:12px;">尚未開始</span>';
+            let endTimeHtml = '<span style="color:#999; font-size:12px;">尚未完成</span>';
+
+            if (task.status === 'completed') endTimeHtml = task.endTime || (logs.length > 0 ? new Date(logs[logs.length - 1].timestamp).toLocaleString() : '未知');
+            
+            if (logs.length > 0) {
+                trueStartTimeHtml = new Date(logs[0].timestamp).toLocaleString();
+                const totalSec = Math.floor((logs[logs.length - 1].timestamp - logs[0].timestamp) / 1000);
+                const m = Math.floor(totalSec / 60); const s = totalSec % 60;
+                totalTimeHtml = `<strong style="color:var(--primary); font-size: 18px;">${m} 分 ${s} 秒</strong>`;
+            }
+
+            let html = `
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:15px; border: 1px solid #eee; display:flex; justify-content:space-between;">
+                    <div>
+                        <p style="margin:0 0 8px 0; font-size:14px;"><strong>巡邏人員：</strong> ${window.escapeHTML(task.guardName || '未登記')}</p>
+                        <p style="margin:0 0 8px 0; font-size:14px; color:#666;"><strong>建立任務：</strong> ${task.startTime}</p>
+                        <p style="margin:0 0 8px 0; font-size:14px; color:var(--primary);"><strong>實際開始：</strong> ${trueStartTimeHtml}</p>
+                        <p style="margin:0; font-size:14px;"><strong>完成時間：</strong> ${endTimeHtml}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <p style="margin:0 0 8px 0; font-size:14px;"><strong>實際總耗時：</strong></p>
+                        ${totalTimeHtml}
+                    </div>
+                </div>
+                <div style="border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px;">
+                    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                        <thead style="background: #f0f2f5;">
+                            <tr>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">巡邏點</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">狀態</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">打卡時間</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd;">距上點耗時</th>
+                                <th style="padding:10px; border-bottom:1px solid #ddd; width:20%;">備註 (手寫區)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            let previousTimestamp = null;
+            (task.points || []).forEach((pt, idx) => {
+                const log = logs.find(l => l.pointName === pt);
+                const incident = incidents.find(i => i.pointName === pt);
+                let statusBadge, timeStr = '-', gapStr = '-', exceededText = '';
+                
+                let maxIntervalSec = 0;
+                if (routeDef) {
+                    let pointInterval = (routeDef.pointIntervals && routeDef.pointIntervals[idx]) ? routeDef.pointIntervals[idx] : 0;
+                    let globalInterval = routeDef.globalInterval || 0;
+                    let appliedInterval = pointInterval > 0 ? pointInterval : globalInterval;
+                    maxIntervalSec = appliedInterval * 60;
+                }
+
+                if (log) {
+                    timeStr = log.timeStr;
+                    if (previousTimestamp === null) {
+                        gapStr = `<span style="color:#28a745; font-weight:bold;">📍 起始點</span>`;
+                    } else {
+                        const gapSec = Math.floor((log.timestamp - previousTimestamp) / 1000);
+                        const gm = Math.floor(gapSec / 60); const gs = gapSec % 60;
+                        if (maxIntervalSec > 0 && gapSec > maxIntervalSec) {
+                            const overSec = gapSec - maxIntervalSec;
+                            const om = Math.floor(overSec / 60); const os = overSec % 60;
+                            exceededText = `超時 ${om}分${os}秒`;
+                            gapStr = `<span style="color:var(--danger); font-weight:bold;">${gm}分${gs}秒 ❗️</span>`;
+                        } else {
+                            gapStr = gm > 0 ? `<span style="color:#1a73e8; font-weight:bold;">${gm}分${gs}秒</span>` : `${gs}秒`;
+                        }
+                    }
+                    previousTimestamp = log.timestamp;
+                    statusBadge = log.isSkipped ? `<span style="color:var(--danger); font-weight:bold;">⚠️ 跳過</span>` : `<span style="color:var(--success); font-weight:bold;">✅ 正常</span>`;
+                } else if (task.skippedPoints && task.skippedPoints.includes(pt)) {
+                    statusBadge = `<span style="color:var(--danger); font-weight:bold;">⚠️ 跳過</span>`;
+                } else if (idx < task.currentPointIndex) {
+                    statusBadge = `<span style="color:var(--success); font-weight:bold;">✅ 正常</span>`;
+                } else {
+                    statusBadge = `<span style="color:#888;">⏳ 尚未巡檢</span>`;
+                }
+
+                let incidentHtml = '';
+                if (incident) {
+                    incidentHtml = `<div style="margin-top: 5px; padding: 5px; background: #e0f7fa; border-radius: 4px; font-size: 11px; color: #006064;">
+                        <strong>📢 報事：</strong>${window.escapeHTML(incident.text || '已上傳現場照片')}
+                    </div>`;
+                }
+
+                const remarkContent = exceededText 
+                    ? `<div style="color:var(--danger); font-size: 12px; font-weight:bold; margin-bottom: 2px;">${exceededText}</div><div style="border-bottom: 1px dashed #999; height: 10px; width: 100%;"></div>`
+                    : `<div style="border-bottom: 1px dashed #999; height: 20px; width: 100%;"></div>`;
+
+                html += `<tr style="border-bottom:1px solid #eee; page-break-inside: avoid;">
+                    <td style="padding:10px;"><strong>${window.escapeHTML(pt)}</strong>${incidentHtml}</td>
+                    <td style="padding:10px;">${statusBadge}</td>
+                    <td style="padding:10px; font-family:monospace; color:#555;">${timeStr}</td>
+                    <td style="padding:10px; color:#666;">${gapStr}</td>
+                    <td style="padding:10px;">${remarkContent}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            if (incidents.length > 0) {
+                html += `<h4 style="margin-top:20px; color:var(--danger); border-bottom:1px solid #eee; padding-bottom:8px;">🚨 異常報事紀錄 (${incidents.length} 筆)</h4>`;
+                incidents.forEach((inc, index) => {
+                    const safePointName = window.escapeHTML(inc.pointName);
+                    const safeIncText = inc.text ? window.escapeHTML(inc.text) : '<span style="color:#aaa;">無文字說明</span>';
+
+                    html += `
+                    <div style="border:1px solid #f5c6cb; background:#fdfdfe; padding:15px; border-radius:6px; margin-bottom:15px; page-break-inside: avoid;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <p style="margin:0 0 8px 0; font-size:14px;"><strong>📍 回報地點：</strong>${safePointName}</p>
+                            <span style="color:#888; font-size:12px;">⏰ ${inc.timeStr}</span>
+                        </div>
+                        <div style="margin:0 0 12px 0; font-size:14px; background:#f8f9fa; padding:10px; border-radius:4px; border:1px solid #eee;">
+                            <strong>📝 描述說明：</strong><br>
+                            <span style="color:#333; line-height:1.5;">${safeIncText}</span>
+                        </div>
+                        ${inc.photo ? `
+                            <div style="text-align:center; margin-bottom:10px;">
+                                <img src="${inc.photo}" onclick="window.openImageModal('${inc.photo}')" 
+                                     style="max-height:200px; border-radius:6px; cursor:pointer; transition:0.2s; border:1px solid #ddd;" 
+                                     onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" title="點擊放大">
+                            </div>` : ''}
+                        
+                        <button class="btn btn-info pdf-hide-btn" style="width:100%; padding:8px; margin-top:5px;" onclick="window.openDispatchModal('${task.id}', ${index})">
+                            📤 轉派給其他部門
+                        </button>
+                    </div>`;
+                });
+            }
+            return html;
+        };
+
+        window.viewTaskDetail = function(taskId) {
+            const task = dbTasks.find(t => t.id === taskId);
+            if (!task) return;
+            document.getElementById('taskDetailTitle').innerText = `📋 任務報表：${task.routeName}`;
+            
+            // 清空舊的封面檔案選擇
+            document.getElementById('coverPdfInput').value = '';
+            
+            document.getElementById('taskDetailContent').innerHTML = window.buildTaskReportHtml(task);
+            document.getElementById('taskDetailModal').classList.add('active');
+        };
+
+        // 🌟 更新：支援與使用者上傳的 PDF 封面合併
+        window.exportTaskToPDF = async function() {
+            const exportArea = document.getElementById('taskExportArea');
+            const rawTitle = document.getElementById('taskDetailTitle').innerText.replace(/[\/\\?%*:|"<>]/g, '-');
+            const coverInput = document.getElementById('coverPdfInput');
+            
+            // 隱藏不必要的按鈕
+            const buttonsToHide = exportArea.querySelectorAll('.pdf-hide-btn');
+            buttonsToHide.forEach(btn => btn.style.display = 'none');
+
+            try {
+                // 1. 產生系統報表的 PDF (轉為 Blob 格式)
+                const pdfWorker = html2pdf().set({
+                    margin: 10, image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                }).from(exportArea);
+                
+                const reportBlob = await pdfWorker.output('blob');
+                const reportBytes = await reportBlob.arrayBuffer();
+
+                // 2. 如果使用者有選擇附加封面，則進行合併
+                if (coverInput && coverInput.files.length > 0) {
+                    const { PDFDocument } = PDFLib;
+                    const mergedPdf = await PDFDocument.create();
+
+                    // 依序載入使用者上傳的多個 PDF 封面
+                    for (let file of coverInput.files) {
+                        const fileBytes = await file.arrayBuffer();
+                        const pdfDoc = await PDFDocument.load(fileBytes);
+                        const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                        copiedPages.forEach(page => mergedPdf.addPage(page));
+                    }
+
+                    // 將系統產生的報表附加在最後
+                    const reportDoc = await PDFDocument.load(reportBytes);
+                    const reportPages = await mergedPdf.copyPages(reportDoc, reportDoc.getPageIndices());
+                    reportPages.forEach(page => mergedPdf.addPage(page));
+
+                    // 輸出最終合併的 PDF 並下載
+                    const mergedPdfBytes = await mergedPdf.save();
+                    const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${rawTitle}_含附加頁.pdf`;
+                    link.click();
+                } else {
+                    // 沒有封面，直接正常下載
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(reportBlob);
+                    link.download = `${rawTitle}.pdf`;
+                    link.click();
+                }
+            } catch (error) {
+                alert("匯出 PDF 時發生錯誤，可能是選擇的檔案格式不支援。");
+                console.error(error);
+            } finally {
+                buttonsToHide.forEach(btn => btn.style.display = 'block');
+            }
+        };
+
+        // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
+        window.batchExportTasks = async function() {
+            const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+            if (checkboxes.length === 0) { alert("請先勾選您要匯出的任務報表！"); return; }
+            
+            const btn = document.getElementById('batchExportBtn');
+            btn.innerText = "⏳ 正在產生並合併批次報表..."; 
+            btn.disabled = true;
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const megaPdf = await PDFDocument.create();
+
+                // 建立一個隱藏的 div 來讓 html2pdf 渲染每一份報表
+                const tempContainer = document.createElement('div');
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.left = '-9999px';
+                tempContainer.style.width = '800px';
+                tempContainer.style.padding = '20px';
+                tempContainer.style.background = 'white';
+                document.body.appendChild(tempContainer);
+
+                // 逐一處理勾選的任務
+                for (let chk of checkboxes) {
+                    const task = dbTasks.find(t => t.id === chk.value);
+                    if (!task) continue;
+
+                    // 填入該任務的 HTML
+                    tempContainer.innerHTML = `<h2 style="color:var(--primary); margin-bottom: 20px;">🏢 大樓巡邏系統 - 獨立報表</h2>` + window.buildTaskReportHtml(task);
+                    
+                    // 將不需要的轉派按鈕移除
+                    tempContainer.querySelectorAll('.pdf-hide-btn').forEach(b => b.remove());
+
+                    // 渲染為 PDF
+                    const pdfWorker = html2pdf().set({
+                        margin: 10, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    }).from(tempContainer);
+                    
+                    const reportBlob = await pdfWorker.output('blob');
+                    const reportBytes = await reportBlob.arrayBuffer();
+
+                    // 將這份報告的頁面合併進總 PDF 中
+                    const reportDoc = await PDFDocument.load(reportBytes);
+                    const pages = await megaPdf.copyPages(reportDoc, reportDoc.getPageIndices());
+                    pages.forEach(p => megaPdf.addPage(p));
+                }
+
+                document.body.removeChild(tempContainer); // 清除隱藏容器
+
+                // 輸出最終大 PDF 並下載
+                const finalBytes = await megaPdf.save();
+                const blob = new Blob([finalBytes], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `批次巡邏報表合併檔_${window.getLocalDateStr(false)}.pdf`;
+                link.click();
+                
+            } catch (err) {
+                alert("批次合併匯出失敗：" + err.message);
+                console.error(err);
+            } finally {
+                btn.innerText = "📥 批次合併匯出勾選報表"; 
+                btn.disabled = false;
+                document.getElementById('selectAllTasks').checked = false;
+                document.querySelectorAll('.task-checkbox').forEach(c => c.checked = false);
+            }
         };
 
         window.openImageModal = function(base64Src) {
