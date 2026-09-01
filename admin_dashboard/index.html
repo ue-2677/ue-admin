@@ -8,6 +8,8 @@
     <!-- 引入 html2pdf 庫，用於匯出 PDF 功能 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
     <style>
         :root { --primary: #1a73e8; --bg: #f4f6f9; --text: #333; --sidebar: #2c3338; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --info: #17a2b8;}
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
@@ -1565,17 +1567,30 @@
         };
 
         // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
+        // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
         window.batchExportTasks = async function() {
             const checkboxes = document.querySelectorAll('.task-checkbox:checked');
             if (checkboxes.length === 0) { alert("請先勾選您要匯出的任務報表！"); return; }
             
             const btn = document.getElementById('batchExportBtn');
-            btn.innerText = "⏳ 正在產生並合併批次報表..."; 
+            btn.innerText = "⏳ 產生中..."; 
             btn.disabled = true;
+
+            const coverInput = document.getElementById('batchCoverPdfInput'); // 🌟 讀取批次封面
 
             try {
                 const { PDFDocument } = PDFLib;
                 const megaPdf = await PDFDocument.create();
+
+                // 🌟 改良：如果有選擇批次封面，先將封面合併在最前面
+                if (coverInput && coverInput.files.length > 0) {
+                    for (let file of coverInput.files) {
+                        const fileBytes = await file.arrayBuffer();
+                        const pdfDoc = await PDFDocument.load(fileBytes);
+                        const copiedPages = await megaPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                        copiedPages.forEach(page => megaPdf.addPage(page));
+                    }
+                }
 
                 // 建立一個隱藏的 div 來讓 html2pdf 渲染每一份報表
                 const tempContainer = document.createElement('div');
@@ -1597,9 +1612,12 @@
                     // 將不需要的轉派按鈕移除
                     tempContainer.querySelectorAll('.pdf-hide-btn').forEach(b => b.remove());
 
-                    // 渲染為 PDF
+                    // 🌟 改良：加入防破版的 pagebreak 設定
                     const pdfWorker = html2pdf().set({
-                        margin: 10, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                        margin: [10, 10, 15, 10], 
+                        html2canvas: { scale: 2, useCORS: true }, 
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break'] }
                     }).from(tempContainer);
                     
                     const reportBlob = await pdfWorker.output('blob');
@@ -1625,9 +1643,9 @@
                 alert("批次合併匯出失敗：" + err.message);
                 console.error(err);
             } finally {
-                btn.innerText = "📥 批次合併匯出勾選報表"; 
+                btn.innerText = "📥 批次合併匯出"; 
                 btn.disabled = false;
-                document.getElementById('selectAllTasks').checked = false;
+                if(document.getElementById('selectAllTasks')) document.getElementById('selectAllTasks').checked = false;
                 document.querySelectorAll('.task-checkbox').forEach(c => c.checked = false);
             }
         };
