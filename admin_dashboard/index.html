@@ -2040,7 +2040,7 @@
         };
 
         // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
-        // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
+       // 🌟 批次匯出勾選的任務 (防白畫面終極版：利用真實 Modal 渲染)
         window.batchExportTasks = async function() {
             const checkboxes = document.querySelectorAll('.task-checkbox:checked');
             if (checkboxes.length === 0) { alert("請先勾選您要匯出的任務報表！"); return; }
@@ -2049,89 +2049,109 @@
             btn.innerText = "⏳ 產生中..."; 
             btn.disabled = true;
 
-            const coverInput = document.getElementById('batchCoverPdfInput'); // 讀取批次封面
-
-            // 🌟 完美修復 1：建立全螢幕深色 Loading 遮罩，蓋住閃爍的渲染過程
+            // 🌟 1. 建立深色 Loading 遮罩，完美擋住底下的自動作業
             const loadingOverlay = document.createElement('div');
             loadingOverlay.style.position = 'fixed';
             loadingOverlay.style.top = '0';
             loadingOverlay.style.left = '0';
-            loadingOverlay.style.width = '100%';
-            loadingOverlay.style.height = '100%';
-            loadingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+            loadingOverlay.style.width = '100vw';
+            loadingOverlay.style.height = '100vh';
+            loadingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
             loadingOverlay.style.color = 'white';
             loadingOverlay.style.display = 'flex';
             loadingOverlay.style.flexDirection = 'column';
             loadingOverlay.style.justifyContent = 'center';
             loadingOverlay.style.alignItems = 'center';
-            loadingOverlay.style.zIndex = '999999'; // 最高層級，擋住一切
+            loadingOverlay.style.zIndex = '999999'; 
             loadingOverlay.innerHTML = `
                 <div style="font-size: 50px; margin-bottom: 20px;">📄</div>
                 <h2 style="margin: 0 0 10px 0;">批次報表合併產生中</h2>
-                <p style="color: #ccc; font-size: 14px;">包含照片與排版渲染，可能需要數十秒鐘，請勿關閉視窗...</p>
+                <p style="color: #ccc; font-size: 14px;">系統正在逐一擷取真實報表，請勿切換視窗或捲動畫面...</p>
+                <p id="batchProgressText" style="color: var(--primary); font-size: 18px; font-weight: bold; margin-top: 15px;">進度: 0 / ${checkboxes.length}</p>
             `;
             document.body.appendChild(loadingOverlay);
 
-            // 解除 body 的高度限制，讓過長的報表不會被裁切
-            const origOverflow = document.body.style.overflow;
-            const origHeight = document.body.style.height;
-            document.body.style.overflow = 'visible';
-            document.body.style.height = 'auto';
+            // 防白畫面：捲回最頂端
+            const origScrollY = window.scrollY;
+            window.scrollTo(0, 0);
 
             try {
                 const { PDFDocument } = PDFLib;
                 const megaPdf = await PDFDocument.create();
 
-                // 處理使用者上傳的封面
-                if (coverInput && coverInput.files.length > 0) {
-                    for (let file of coverInput.files) {
-                        const fileBytes = await file.arrayBuffer();
-                        const pdfDoc = await PDFDocument.load(fileBytes);
-                        const copiedPages = await megaPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                        copiedPages.forEach(page => megaPdf.addPage(page));
-                    }
+                // 🌟 2. 處理並合併自訂封面
+                if (window.finalCoverPdfBytes) {
+                    const coverDoc = await PDFDocument.load(window.finalCoverPdfBytes);
+                    const copiedCoverPages = await megaPdf.copyPages(coverDoc, coverDoc.getPageIndices());
+                    copiedCoverPages.forEach(page => megaPdf.addPage(page));
                 }
 
-                // 🌟 完美修復 2：建立渲染容器，將它放在 Loading 遮罩下方，確保背景是純白且在最上層
-                const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute';
-                tempContainer.style.top = '0';
-                tempContainer.style.left = '0';
-                tempContainer.style.width = '800px'; // 固定 A4 比例寬度
-                tempContainer.style.padding = '20px';
-                tempContainer.style.background = 'white';
-                tempContainer.style.zIndex = '1000'; // 確保在系統背景之上，但被 Loading 遮罩擋住
-                document.body.appendChild(tempContainer);
+                // 🌟 3. 取得原本單一匯出用的「真實 Modal 容器」
+                const exportModal = document.getElementById('taskDetailModal');
+                const exportArea = document.getElementById('taskExportArea');
+                const detailContent = document.getElementById('taskDetailContent');
+                
+                // 強制顯示 Modal，並將它放在 Loading 遮罩的下一層
+                exportModal.classList.add('active');
+                exportModal.style.zIndex = '999998'; 
 
-                // 逐一處理勾選的任務
+                let currentIndex = 0;
+                
+                // 🌟 4. 逐一處理勾選的任務
                 for (let chk of checkboxes) {
+                    currentIndex++;
+                    document.getElementById('batchProgressText').innerText = `處理進度: ${currentIndex} / ${checkboxes.length}`;
+
                     const task = dbTasks.find(t => t.id === chk.value);
                     if (!task) continue;
 
-                    tempContainer.innerHTML = `<h2 style="color:var(--primary); margin-bottom: 20px;">🏢 大樓巡邏系統 - 獨立報表</h2>` + window.buildTaskReportHtml(task);
-                    tempContainer.querySelectorAll('.pdf-hide-btn').forEach(b => b.remove());
+                    // 寫入資料到真實的 Modal 中
+                    document.getElementById('taskDetailTitle').innerText = `📋 任務報表：${task.routeName}`;
+                    detailContent.innerHTML = window.buildTaskReportHtml(task);
+                    
+                    // 隱藏不需要印出的轉派按鈕
+                    exportArea.querySelectorAll('.pdf-hide-btn').forEach(b => b.style.display = 'none');
 
-                    // 🌟 完美修復 3：給予 300 毫秒的緩衝時間，確保圖片都載入完成再截圖
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    // 解除 Modal 內部卷軸高度限制，讓它完全展開
+                    const currentTableContainer = document.getElementById('taskTableContainer');
+                    const origMaxHeight = currentTableContainer ? currentTableContainer.style.maxHeight : '';
+                    const origOverflowY = currentTableContainer ? currentTableContainer.style.overflowY : '';
+                    if (currentTableContainer) { 
+                        currentTableContainer.style.maxHeight = 'none'; 
+                        currentTableContainer.style.overflowY = 'visible'; 
+                    }
 
+                    // 🌟 防白畫面關鍵：給予 500 毫秒緩衝，讓瀏覽器有時間把圖片跟 DOM 畫上去
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    // 執行擷取與 PDF 轉換
                     const pdfWorker = html2pdf().set({
                         margin: [10, 10, 15, 10], 
-                        html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
+                        html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 }, 
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break'] }
-                    }).from(tempContainer);
+                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break', 'h2', 'h4'] } 
+                    }).from(exportArea);
                     
                     const reportBlob = await pdfWorker.output('blob');
                     const reportBytes = await reportBlob.arrayBuffer();
 
+                    // 合併到總 PDF 檔中
                     const reportDoc = await PDFDocument.load(reportBytes);
                     const pages = await megaPdf.copyPages(reportDoc, reportDoc.getPageIndices());
                     pages.forEach(p => megaPdf.addPage(p));
+
+                    // 恢復 Modal 內部捲軸狀態
+                    if (currentTableContainer) { 
+                        currentTableContainer.style.maxHeight = origMaxHeight; 
+                        currentTableContainer.style.overflowY = origOverflowY; 
+                    }
                 }
 
-                document.body.removeChild(tempContainer);
+                // 隱藏 Modal，恢復層級
+                exportModal.classList.remove('active');
+                exportModal.style.zIndex = ''; 
 
-                // 輸出最終大 PDF 並下載
+                // 🌟 5. 輸出最終大 PDF 並下載
                 const finalBytes = await megaPdf.save();
                 const blob = new Blob([finalBytes], { type: 'application/pdf' });
                 const link = document.createElement('a');
@@ -2143,10 +2163,10 @@
                 alert("批次合併匯出失敗：" + err.message);
                 console.error(err);
             } finally {
-                // 復原畫面狀態，移除 Loading 遮罩
-                document.body.style.overflow = origOverflow;
-                document.body.style.height = origHeight;
+                // 復原畫面
+                window.scrollTo(0, origScrollY);
                 if(document.body.contains(loadingOverlay)) document.body.removeChild(loadingOverlay);
+                document.getElementById('taskDetailModal').classList.remove('active');
 
                 btn.innerText = "📥 批次合併匯出"; 
                 btn.disabled = false;
