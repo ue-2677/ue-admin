@@ -1668,27 +1668,47 @@
             window.loadDashboardData();
         };
 
+        // 🌟 新增：快速日期設定功能
+        window.setQuickDate = function(range) {
+            const now = new Date();
+            let start, end;
+
+            if (range === 'today') {
+                start = now; end = now;
+            } else if (range === 'week') {
+                const day = now.getDay() || 7; // 將週日(0)轉換為7
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
+                end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 7);
+            } else if (range === 'month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            } else if (range === 'year') {
+                start = new Date(now.getFullYear(), 0, 1);
+                end = new Date(now.getFullYear(), 11, 31);
+            }
+
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            document.getElementById('taskFilterStartDate').value = formatDate(start);
+            document.getElementById('taskFilterEndDate').value = formatDate(end);
+            window.applyTaskFilters();
+        };
+
         window.toggleAllTasks = function(source) {
             document.querySelectorAll('.task-checkbox').forEach(chk => { chk.checked = source.checked; });
         };
 
+        // 🌟 更新：載入監控列表 (連動統計數字與篩選)
         window.loadDashboardData = function() {
             const tbody = document.getElementById('taskTableBody'); 
             if (!tbody) return;
             tbody.innerHTML = '';
             
-            let completedCount = 0, ongoingCount = 0, totalSkipped = 0, totalIncidents = 0;
-            
-            dbTasks.forEach(task => {
-                if (task.status === 'completed') completedCount++; else ongoingCount++;
-                totalSkipped += (task.skippedPoints || []).length;
-                totalIncidents += (task.incidents || []).length;
-            });
-            if(document.getElementById('statTotal')) document.getElementById('statTotal').innerText = dbTasks.length; 
-            if(document.getElementById('statCompleted')) document.getElementById('statCompleted').innerText = completedCount;
-            if(document.getElementById('statSkipped')) document.getElementById('statSkipped').innerText = totalSkipped;
-            if(document.getElementById('statIncidents')) document.getElementById('statIncidents').innerText = totalIncidents;
-
             const keyword = document.getElementById('taskFilterKeyword') ? document.getElementById('taskFilterKeyword').value.toLowerCase().trim() : '';
             const startDateRaw = document.getElementById('taskFilterStartDate') ? document.getElementById('taskFilterStartDate').value : '';
             const endDateRaw = document.getElementById('taskFilterEndDate') ? document.getElementById('taskFilterEndDate').value : '';
@@ -1697,6 +1717,7 @@
             const startDate = startDateRaw ? startDateRaw.replace(/-/g, '') : '00000000';
             const endDate = endDateRaw ? endDateRaw.replace(/-/g, '') : '99999999';
 
+            // 1. 執行列表條件過濾
             let filteredTasks = dbTasks.filter(task => {
                 if (statusFilter !== 'all') {
                     if (statusFilter === 'completed' && task.status !== 'completed') return false;
@@ -1717,6 +1738,19 @@
                 return true;
             });
 
+            // 🌟 2. 核心改良：根據「過濾後」的結果，即時更新頂部統計數字！
+            let completedCount = 0, ongoingCount = 0, totalSkipped = 0, totalIncidents = 0;
+            filteredTasks.forEach(task => {
+                if (task.status === 'completed') completedCount++; else ongoingCount++;
+                totalSkipped += (task.skippedPoints || []).length;
+                totalIncidents += (task.incidents || []).length;
+            });
+            if(document.getElementById('statTotal')) document.getElementById('statTotal').innerText = filteredTasks.length; 
+            if(document.getElementById('statCompleted')) document.getElementById('statCompleted').innerText = completedCount;
+            if(document.getElementById('statSkipped')) document.getElementById('statSkipped').innerText = totalSkipped;
+            if(document.getElementById('statIncidents')) document.getElementById('statIncidents').innerText = totalIncidents;
+
+            // 3. 渲染過濾後的表格
             if (filteredTasks.length === 0) { 
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999; padding:20px;">目前尚無符合條件的任務紀錄。</td></tr>'; 
                 return;
