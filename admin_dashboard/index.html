@@ -120,12 +120,8 @@
             #view-assistant td:nth-of-type(5)::before { content: "狀態 :"; }
             #view-assistant td:nth-of-type(6)::before { content: "操作 :"; }
         }
-        tr {
-            page-break-inside: avoid !important;
-        }
-        .avoid-break {
-            page-break-inside: avoid !important;
-        }
+        tr { page-break-inside: avoid !important; }
+        .avoid-break { page-break-inside: avoid !important; }
     </style>
 </head>
 <body onclick="closeProfileMenu(event)">
@@ -141,12 +137,10 @@
             <li class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢 特別事項通知發布</li>
             <li class="nav-item" onclick="window.switchAdminView('view-assistant', this)">🔔 物業助理需求通知</li>
             <li class="nav-item" onclick="window.switchAdminView('view-delete-logs', this)">🗑️ 刪除操作紀錄</li>
-            <!-- 🌟 整合後的部門系統入口 -->
             <li class="nav-item" onclick="window.toggleDeptMenu(event)" style="position: relative; justify-content: space-between; overflow: visible;">
                 <div style="display:flex; align-items:center; gap:10px;">🚪 各部門系統入口</div>
                 <span id="deptArrow" style="font-size: 12px; transition: 0.2s;">▶</span>
                 
-                <!-- 彈出在旁邊的子選單 -->
                 <div id="deptSubMenu" class="dept-submenu">
                     <div class="dept-submenu-item" onclick="event.stopPropagation(); window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</div>
                     <div class="dept-submenu-item" onclick="event.stopPropagation(); window.open('../engineering/', '_blank')">🔧 工程部派單後台</div>
@@ -162,8 +156,6 @@
         <div class="nav-item" onclick="window.openManualIssueModal()">📝<br>發單</div>
         <div class="nav-item active" onclick="window.switchAdminView('view-mobile-home', this)">🏠<br>各部連結</div>
         <div class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢<br>特別事項</div>
-        
-        <!-- 👇 修改這裡，把原本單行的助理需求展開，並加入 assistantBadge -->
         <div class="nav-item" onclick="window.switchAdminView('view-assistant', this)">
             🔔<br>助理需求
             <span id="assistantBadge" class="nav-badge" style="display:none;">0</span>
@@ -176,12 +168,11 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <span id="clock" class="pc-only" style="font-size: 14px; color: #666;"></span>
                 <button class="btn btn-primary pc-only" style="padding: 6px 12px; font-size: 13px; margin:0;" onclick="window.openManualIssueModal()">📝 快速發單</button>
-                
                 <button class="btn btn-success pc-only" style="padding: 6px 12px; font-size: 13px; margin:0;" onclick="window.refreshCurrentView()">🔄 刷新</button>
                 
                 <!-- 🌟 新增：個人下拉選單 -->
                 <div style="position: relative;">
-                    <div id="currentUserDisplay" class="profile-trigger" onclick="toggleProfileMenu(event)"></div>
+                    <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)"></div>
                     <div id="profileMenu" class="profile-dropdown-content">
                         <button class="btn btn-info" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openIssuedWorkOrdersModal()">📤 已發工單</button>
                         <button class="btn btn-warning" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
@@ -240,7 +231,6 @@
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
                                 <input type="date" id="taskFilterEndDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
                             </div>
-                            <!-- 🌟 新增：狀態篩選下拉選單 -->
                             <div style="flex: 1; min-width: 110px;">
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 任務狀態</label>
                                 <select id="taskFilterStatus" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
@@ -257,7 +247,6 @@
                     <table>
                         <thead>
                             <tr>
-                                <!-- 🌟 新增：全選框 -->
                                 <th style="width: 4%; text-align: center;"><input type="checkbox" id="selectAllTasks" onclick="window.toggleAllTasks(this)" style="transform: scale(1.3); cursor: pointer;"></th>
                                 <th style="width: 16%;">路線名稱</th>
                                 <th style="width: 12%;">巡邏人員</th>
@@ -341,8 +330,6 @@
                         <div>巡邏人員與權限管理</div>
                         <button class="btn btn-primary" onclick="window.openUserModal()">➕ 新增人員</button>
                     </div>
-                    
-                    <!-- 🌟 新增：人員過濾器 -->
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
                         <div style="flex: 1; min-width: 140px;">
                             <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 搜尋帳號或姓名</label>
@@ -364,7 +351,6 @@
                             <button class="btn btn-secondary" onclick="document.getElementById('userFilterKeyword').value=''; document.getElementById('userFilterRole').value='all'; window.loadUsersData();" style="padding: 9px 15px; margin:0;">🔄 重設</button>
                         </div>
                     </div>
-
                     <div style="padding: 15px; background: #e2e3e5; color: #383d41; font-size: 13px; border-bottom: 1px solid #eee;">
                         💡 提示：最高管理員可強制重設他人密碼，請點擊「編輯」並直接輸入新密碼即可。
                     </div>
@@ -392,8 +378,6 @@
                         <div>📢 跨部門每日注意事項 / 特別通知</div>
                         <button class="btn btn-primary" onclick="window.openNoticeModal()">➕ 新增通知</button>
                     </div>
-                    
-                    <!-- 🌟 新增：通知狀態過濾器 -->
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; border: 1px solid #eee;">
                         <div style="flex: 1; max-width: 200px;">
                             <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 篩選通知狀態</label>
@@ -404,7 +388,6 @@
                             </select>
                         </div>
                     </div>
-
                     <table>
                         <thead><tr><th style="width: 45%;">通知內容</th><th style="width: 20%;">有效期限</th><th style="width: 20%;">目標部門</th><th style="width: 15%;">操作</th></tr></thead>
                         <tbody id="noticesTableBody"></tbody>
@@ -461,7 +444,7 @@
             </div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-success" style="flex: 1;" onclick="window.saveNotice()">發布通知</button>
-                <button class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('noticeModal').classList.remove('active')">取消</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="window.closeModal('noticeModal')">取消</button>
             </div>
         </div>
     </div>
@@ -470,8 +453,6 @@
     <div id="taskDetailModal" class="modal">
         <div class="modal-content" style="width: 800px;">
             <h3 id="taskDetailTitle">任務詳細資訊</h3>
-            
-            <!-- 🌟 新增：封面 PDF 選擇區塊 -->
             <div style="margin-bottom: 15px; padding: 12px; background: #e8f0fe; border-radius: 8px; border: 1px solid #d2e3fc;">
                 <label style="font-size: 14px; font-weight: bold; color: var(--primary); display:block; margin-bottom:5px;">📎 附加自訂封面 PDF</label>
                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -480,7 +461,6 @@
                     <button type="button" class="btn btn-danger btn-clear-pdf" style="display:none; padding: 8px 12px; font-size: 12px; margin: 0;" onclick="window.clearCoverPdf()">❌ 移除</button>
                 </div>
             </div>
-
             <div id="taskExportArea">
                 <div id="taskDetailContent"></div>
             </div>
@@ -509,11 +489,12 @@
             </div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-success" style="flex: 1;" onclick="window.submitWorkOrder()">建立工單</button>
-                <button class="btn btn-danger" style="flex: 1;" onclick="document.getElementById('dispatchModal').classList.remove('active')">取消</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('dispatchModal')">取消</button>
             </div>
         </div>
     </div>
-    <!-- 新增：手動發單彈窗 -->
+
+    <!-- 手動發單彈窗 -->
     <div id="manualIssueModal" class="modal">
         <div class="modal-content" style="width:500px;">
             <h3 style="color: var(--primary); margin-top:0;">📝 新增派發工單</h3>
@@ -540,26 +521,26 @@
             </div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-success" style="flex: 1;" onclick="window.submitManualIssue()">送出工單</button>
-                <button class="btn btn-danger" style="flex: 1;" onclick="document.getElementById('manualIssueModal').classList.remove('active')">取消</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('manualIssueModal')">取消</button>
             </div>
         </div>
     </div>
 
-    <!-- 新增：結案備註選擇彈窗 -->
+    <!-- 結案備註選擇彈窗 -->
     <div id="completeActionModal" class="modal">
         <div class="modal-content" style="width:400px; text-align:center;">
             <h3 style="color: var(--success); margin-top:0;">✅ 完成需求</h3>
             <p style="color:#666; font-size:14px;">此單號已處理完畢，您要加入結案備註嗎？</p>
             <input type="hidden" id="completingOrderId">
             <textarea id="completionRemarkInput" class="form-control" rows="3" placeholder="(選填) 請輸入結案備註..." style="margin-bottom:15px;"></textarea>
-            
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button class="btn btn-success" style="padding:12px; font-size:15px;" onclick="window.executeCompleteRequest(true)">📝 加上備註並完成</button>
                 <button class="btn btn-primary" style="padding:12px; font-size:15px;" onclick="window.executeCompleteRequest(false)">⚡ 直接完成 (不加備註)</button>
-                <button class="btn btn-secondary" style="padding:12px; font-size:15px;" onclick="document.getElementById('completeActionModal').classList.remove('active')">❌ 取消返回</button>
+                <button class="btn btn-secondary" style="padding:12px; font-size:15px;" onclick="window.closeModal('completeActionModal')">❌ 取消返回</button>
             </div>
         </div>
     </div>
+
     <div id="pointModal" class="modal">
         <div class="modal-content" style="width:500px;">
             <h3 id="pointModalTitle">新增巡邏點位</h3>
@@ -646,12 +627,12 @@
             </div>
         </div>
     </div>
-    <!-- 新增：已發工單追蹤 Modal -->
+    
+    <!-- 已發工單追蹤 Modal -->
     <div id="issuedWorkOrdersModal" class="modal">
         <div class="modal-content" style="width: 800px;">
             <h3 style="color: var(--info); margin-top:0;">📤 已發出的工單追蹤</h3>
             <p style="font-size:13px; color:#666; margin-top:-10px;">這裡顯示從系統轉派給工程部或清潔部的所有工單處理進度。</p>
-            
             <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
                 <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
                     <thead style="background: #f0f2f5; position: sticky; top: 0; z-index: 1;">
@@ -668,30 +649,29 @@
                     </tbody>
                 </table>
             </div>
-            
             <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-primary" style="flex: 1;" onclick="document.getElementById('issuedWorkOrdersModal').classList.remove('active')">關閉視窗</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="window.closeModal('issuedWorkOrdersModal')">關閉視窗</button>
             </div>
         </div>
     </div>
+    
     <input type="file" id="hiddenPdfInput" accept=".pdf" multiple style="display: none;" onchange="window.handleCoverPdfSelect(event)">
 
-    <!-- 🌟 視覺化 PDF 頁面編輯器彈窗 -->
+    <!-- 視覺化 PDF 頁面編輯器彈窗 -->
     <div id="pdfEditorModal" class="modal">
         <div class="modal-content" style="width: 900px; max-width: 95%; background: #f8f9fa;">
             <h3 style="color: var(--primary); margin-top: 0;">📄 編輯與整理附加封面 PDF</h3>
             <p style="font-size: 13px; color: #666; margin-top: -10px;">您可以旋轉方向不對的頁面，或刪除不需要的頁面。</p>
-            
             <div id="pdfThumbnailsContainer" style="display: flex; gap: 15px; overflow-x: auto; padding: 15px; background: #e2e3e5; border: 1px solid #ccc; border-radius: 8px; min-height: 250px;">
                 <!-- 縮圖預覽會生成在此處 -->
             </div>
-            
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button type="button" class="btn btn-success" style="flex: 2; padding: 12px; font-size: 16px;" onclick="window.saveEditedPdf()">✅ 確認套用並儲存</button>
-                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('pdfEditorModal').classList.remove('active')">取消</button>
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="window.closeModal('pdfEditorModal')">取消</button>
             </div>
         </div>
     </div>
+    
     <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
         <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
         <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
@@ -699,14 +679,9 @@
     </div>
     
     <script type="module">
-        // 🌟 1. 從上一層的共用檔案中「匯入」設定與工具
         import { db, auth, secondaryAuth, escapeHTML, getLocalDateStr } from '../firebase-config.js';
-        
-        // 🌟 2. 匯入你需要用到的 Firestore 與 Auth 功能
-        import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, setDoc, query, orderBy, getDocs, where, getDoc } 
-        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
-        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, setDoc, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         window.escapeHTML = escapeHTML;
         window.getLocalDateStr = getLocalDateStr;
@@ -715,9 +690,34 @@
         let dbTasks = []; let dbAssistantRequests = []; let dbNotices = [];
         let currentUser = null; const VIRTUAL_DOMAIN = "@patrol.com";
 
-        // ==========================================
+        // 🌟 新增：表格全域排序與搜尋狀態設定 (修復原版未定義函數之錯誤)
+        window.pointSortState = { col: 'floor', desc: false };
+        window.routeSortState = { col: 'order', desc: false };
+
+        window.sortPoints = function(col) {
+            if (window.pointSortState.col === col) {
+                window.pointSortState.desc = !window.pointSortState.desc;
+            } else {
+                window.pointSortState.col = col;
+                window.pointSortState.desc = false;
+            }
+            window.loadPointsData();
+        };
+
+        window.sortRoutes = function(col) {
+            if (window.routeSortState.col === col) {
+                window.routeSortState.desc = !window.routeSortState.desc;
+            } else {
+                window.routeSortState.col = col;
+                window.routeSortState.desc = false;
+            }
+            window.loadRoutesData();
+        };
+
+        window.applyRouteFilter = function() { window.loadRoutesData(); };
+        window.applyPointFilter = function() { window.loadPointsData(); };
+
         // 🌟 選單與 UI 切換控制
-        // ==========================================
         window.toggleProfileMenu = function(e) {
             e.stopPropagation();
             document.getElementById('profileMenu').classList.toggle('active');
@@ -777,9 +777,7 @@
 
         window.closeModal = function(modalId) { document.getElementById(modalId).classList.remove('active'); };
 
-        // ==========================================
         // 🔐 登入驗證與監聽
-        // ==========================================
         window.isSystemInitialized = false; 
         let userDocListener = null; 
 
@@ -861,9 +859,7 @@
             }
         };
 
-        // ==========================================
         // 📡 Firebase 即時監聽
-        // ==========================================
         let isInitialLoad = true; 
 
         function initRealtimeListeners() {
@@ -945,9 +941,7 @@
             });
         };
 
-        // ==========================================
         // 📢 特別事項通知
-        // ==========================================
         window.loadNoticesData = function() {
             const tbody = document.getElementById('noticesTableBody'); tbody.innerHTML = '';
             const statusFilter = document.getElementById('noticeFilterStatus') ? document.getElementById('noticeFilterStatus').value : 'all';
@@ -1019,15 +1013,19 @@
                 } else {
                     await addDoc(collection(db, "notices"), { text: text, startDate: sDate, endDate: eDate, departments: targetDepts, createdBy: currentUser.name, createdAt: Date.now() });
                 }
-                document.getElementById('noticeModal').classList.remove('active');
+                window.closeModal('noticeModal');
             } catch(e) { alert("儲存失敗，請檢查網路。"); }
         };
         
-        window.deleteNotice = async function(id) { if(confirm("確定要刪除這條通知嗎？")) await deleteDoc(doc(db, "notices", id)); };
+        window.deleteNotice = async function(id) { 
+            if(confirm("確定要刪除這條通知嗎？")) {
+                const notice = dbNotices.find(n => n.id === id) || { id: id };
+                await window.logDeletion("特別事項通知", notice);
+                await deleteDoc(doc(db, "notices", id));
+            }
+        };
 
-        // ==========================================
         // 🔔 助理需求工單處理
-        // ==========================================
         window.updateAssistantBadge = function() {
             const badge = document.getElementById('assistantBadge');
             if (!badge) return;
@@ -1108,7 +1106,7 @@
                 let payload = { status: '已完成', completeTime: new Date().toLocaleString(), completer: currentUser.name || currentUser.username };
                 if (withRemark) payload.completionRemark = remark;
                 await updateDoc(doc(db, "workOrders", id), payload);
-                document.getElementById('completeActionModal').classList.remove('active');
+                window.closeModal('completeActionModal');
             } catch(e) { alert("結案失敗，請檢查網路。"); }
         };
 
@@ -1120,9 +1118,7 @@
             }
         };
 
-        // ==========================================
         // 📝 手動發單邏輯
-        // ==========================================
         let manualPhotoBase64 = "";
         window.openManualIssueModal = function() {
             document.getElementById('manualIssueLocation').value = ''; document.getElementById('manualIssueText').value = '';
@@ -1167,11 +1163,10 @@
                     dispatcherUsername: currentUser.username, dispatcherName: currentUser.name
                 });
                 alert(`✅ 發單成功！單號：${refNumber}`);
-                document.getElementById('manualIssueModal').classList.remove('active');
+                window.closeModal('manualIssueModal');
             } catch(e) { alert("發單失敗，請檢查網路連線。"); }
         };
 
-        // 🌟 已發工單追蹤 Modal
         window.openIssuedWorkOrdersModal = async function() {
             document.getElementById('profileMenu').classList.remove('active');
             const modal = document.getElementById('issuedWorkOrdersModal');
@@ -1226,9 +1221,7 @@
             } catch (error) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:20px;">讀取失敗，請檢查網路連線。</td></tr>'; }
         };
 
-        // ==========================================
         // 👥 人員與權限管理
-        // ==========================================
         window.loadUsersData = function() {
             try {
                 const tbody = document.getElementById('usersTableBody'); 
@@ -1364,9 +1357,7 @@
             } catch(e) { alert("❌ 更新失敗，請確認舊密碼正確。"); }
         };
 
-        // ==========================================
         // 📍 點位與路線管理
-        // ==========================================
         window.loadPointsData = function() {
             const tbody = document.getElementById('pointsTableBody'); if (!tbody) return; tbody.innerHTML = '';
             let keyword = document.getElementById('pointFilterKeyword') ? document.getElementById('pointFilterKeyword').value.toLowerCase().trim() : "";
@@ -1457,7 +1448,13 @@
             } catch(e) { console.error("Error saving point", e); alert("儲存失敗！"); }
         };
         window.editPoint = function(id) { window.openPointModal(id); };
-        window.deletePoint = async function(id) { if (confirm("確定要刪除這個巡邏點嗎？")) { await deleteDoc(doc(db, "points", id)); } };
+        window.deletePoint = async function(id) { 
+            if (confirm("確定要刪除這個巡邏點嗎？")) { 
+                const pt = dbPoints.find(p => p.id === id) || { id: id };
+                await window.logDeletion("巡邏點位", pt);
+                await deleteDoc(doc(db, "points", id)); 
+            } 
+        };
 
         window.exportRoutesBackup = function() {
             const routesData = JSON.stringify(dbRoutes, null, 2);
@@ -1620,11 +1617,15 @@
             } catch(e) { alert("儲存失敗"); }
         };
         window.editRoute = function(id) { window.openRouteModal(id); };
-        window.deleteRoute = async function(id) { if (confirm("確定要刪除這條路線嗎？")) await deleteDoc(doc(db, "routes", id)); };
+        window.deleteRoute = async function(id) { 
+            if (confirm("確定要刪除這條路線嗎？")) {
+                const route = dbRoutes.find(r => r.id === id) || { id: id };
+                await window.logDeletion("巡邏路線", route);
+                await deleteDoc(doc(db, "routes", id));
+            }
+        };
 
-        // ==========================================
         // 🌟 巡邏任務即時監控列表 (儀表板)
-        // ==========================================
         window.applyTaskFilters = function() { window.loadDashboardData(); };
         window.clearTaskFilters = function() {
             document.getElementById('taskFilterKeyword').value = '';
@@ -1753,7 +1754,7 @@
                         ${totalTimeHtml}
                     </div>
                 </div>
-                <div style="border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px;">
+                <div id="taskTableContainer" style="border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px;">
                     <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
                         <thead style="background: #f0f2f5;">
                             <tr>
@@ -1860,9 +1861,7 @@
             return html;
         };
 
-        // ==========================================
         // 🌟 視覺化 PDF 編輯器核心 (預覽、旋轉、刪除)
-        // ==========================================
         window.customCoverPdfDoc = null; 
         window.finalCoverPdfBytes = null; 
 
@@ -1973,14 +1972,11 @@
             document.querySelectorAll('.btn-clear-pdf').forEach(el => el.style.display = "none");
         };
 
-        // ==========================================
         // 🌟 報表檢視與匯出 (支援防切斷與封面合併)
-        // ==========================================
         window.viewTaskDetail = function(taskId) {
             const task = dbTasks.find(t => t.id === taskId);
             if (!task) return;
             document.getElementById('taskDetailTitle').innerText = `📋 任務報表：${task.routeName}`;
-            
             document.getElementById('taskDetailContent').innerHTML = window.buildTaskReportHtml(task);
             document.getElementById('taskDetailModal').classList.add('active');
         };
@@ -2099,6 +2095,7 @@
             }
         };
 
+        window.currentDispatchData = null;
         window.openDispatchModal = function(taskId, incidentIndex) {
             const task = dbTasks.find(t => t.id === taskId);
             const inc = task.incidents[incidentIndex];
