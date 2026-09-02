@@ -2039,62 +2039,102 @@
             }
         };
 
+        // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
         window.batchExportTasks = async function() {
             const checkboxes = document.querySelectorAll('.task-checkbox:checked');
             if (checkboxes.length === 0) { alert("請先勾選您要匯出的任務報表！"); return; }
             
             const btn = document.getElementById('batchExportBtn');
-            btn.innerText = "⏳ 正在產生並合併批次報表..."; btn.disabled = true;
+            btn.innerText = "⏳ 產生中..."; 
+            btn.disabled = true;
+
+            const coverInput = document.getElementById('batchCoverPdfInput'); // 🌟 讀取批次封面
+
+            // 🌟 白畫面修復關鍵 1：暫時解除 body 的高度與裁切限制，避免報表內容被切斷
+            const origOverflow = document.body.style.overflow;
+            const origHeight = document.body.style.height;
+            document.body.style.overflow = 'visible';
+            document.body.style.height = 'auto';
 
             try {
                 const { PDFDocument } = PDFLib;
                 const megaPdf = await PDFDocument.create();
 
-                if (window.finalCoverPdfBytes) {
-                    const coverDoc = await PDFDocument.load(window.finalCoverPdfBytes);
-                    const copiedCoverPages = await megaPdf.copyPages(coverDoc, coverDoc.getPageIndices());
-                    copiedCoverPages.forEach(page => megaPdf.addPage(page));
+                // 🌟 如果有選擇批次封面，先將封面合併在最前面
+                if (coverInput && coverInput.files.length > 0) {
+                    for (let file of coverInput.files) {
+                        const fileBytes = await file.arrayBuffer();
+                        const pdfDoc = await PDFDocument.load(fileBytes);
+                        const copiedPages = await megaPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                        copiedPages.forEach(page => megaPdf.addPage(page));
+                    }
                 }
 
+                // 建立一個隱藏的 div 來讓 html2pdf 渲染每一份報表
                 const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute'; tempContainer.style.left = '-9999px'; tempContainer.style.width = '800px'; tempContainer.style.padding = '20px'; tempContainer.style.background = 'white';
+                tempContainer.style.position = 'absolute';
+                
+                // 🌟 白畫面修復關鍵 2：不能使用 left: -9999px，要放在畫面上但利用 z-index 藏在背景底層
+                tempContainer.style.top = '0';
+                tempContainer.style.left = '0';
+                tempContainer.style.zIndex = '-1000'; 
+                tempContainer.style.width = '800px';
+                tempContainer.style.padding = '20px';
+                tempContainer.style.background = 'white';
                 document.body.appendChild(tempContainer);
 
+                // 逐一處理勾選的任務
                 for (let chk of checkboxes) {
                     const task = dbTasks.find(t => t.id === chk.value);
                     if (!task) continue;
 
+                    // 填入該任務的 HTML
                     tempContainer.innerHTML = `<h2 style="color:var(--primary); margin-bottom: 20px;">🏢 大樓巡邏系統 - 獨立報表</h2>` + window.buildTaskReportHtml(task);
+                    
+                    // 將不需要的轉派按鈕移除
                     tempContainer.querySelectorAll('.pdf-hide-btn').forEach(b => b.remove());
 
+                    // 🌟 加入防破版的 pagebreak 設定與 windowWidth 穩定畫布
                     const pdfWorker = html2pdf().set({
-                        margin: [10, 10, 15, 10], html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break'] }
+                        margin: [10, 10, 15, 10], 
+                        html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break', 'h2', 'h4'] } 
                     }).from(tempContainer);
                     
                     const reportBlob = await pdfWorker.output('blob');
                     const reportBytes = await reportBlob.arrayBuffer();
 
+                    // 將這份報告的頁面合併進總 PDF 中
                     const reportDoc = await PDFDocument.load(reportBytes);
                     const pages = await megaPdf.copyPages(reportDoc, reportDoc.getPageIndices());
                     pages.forEach(p => megaPdf.addPage(p));
                 }
 
-                document.body.removeChild(tempContainer);
+                document.body.removeChild(tempContainer); // 清除隱藏容器
 
+                // 輸出最終大 PDF 並下載
                 const finalBytes = await megaPdf.save();
                 const blob = new Blob([finalBytes], { type: 'application/pdf' });
-                const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `批次巡邏報表合併檔_${window.getLocalDateStr(false)}.pdf`; link.click();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `批次巡邏報表合併檔_${window.getLocalDateStr(false)}.pdf`;
+                link.click();
                 
             } catch (err) {
-                alert("批次合併匯出失敗：" + err.message); console.error(err);
+                alert("批次合併匯出失敗：" + err.message);
+                console.error(err);
             } finally {
-                btn.innerText = "📥 批次合併匯出"; btn.disabled = false;
+                // 🌟 匯出完畢後，恢復 body 原本的版面限制
+                document.body.style.overflow = origOverflow;
+                document.body.style.height = origHeight;
+
+                btn.innerText = "📥 批次合併匯出"; 
+                btn.disabled = false;
                 if(document.getElementById('selectAllTasks')) document.getElementById('selectAllTasks').checked = false;
                 document.querySelectorAll('.task-checkbox').forEach(c => c.checked = false);
             }
         };
-
         window.currentDispatchData = null;
         window.openDispatchModal = function(taskId, incidentIndex) {
             const task = dbTasks.find(t => t.id === taskId);
