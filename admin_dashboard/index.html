@@ -218,8 +218,40 @@
                                 <button id="batchExportBtn" class="btn btn-info" style="margin:0;" onclick="window.batchExportTasks()">📥 批次合併匯出</button>
                             </div>
                         </div>
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
-                            <div style="flex: 1; min-width: 140px;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                            <!-- 🌟 新增：快速日期篩選按鈕 -->
+                            <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-bottom: 1px dashed #ddd; padding-bottom: 10px;">
+                                <span style="font-size: 13px; font-weight: bold; color: var(--primary);">📅 快速篩選：</span>
+                                <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px; margin: 0; background-color: #6c757d;" onclick="window.setQuickDate('today')">今日</button>
+                                <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px; margin: 0; background-color: #6c757d;" onclick="window.setQuickDate('week')">本週</button>
+                                <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px; margin: 0; background-color: #6c757d;" onclick="window.setQuickDate('month')">本月</button>
+                                <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px; margin: 0; background-color: #6c757d;" onclick="window.setQuickDate('year')">本年</button>
+                                <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px; margin: 0; background-color: #adb5bd;" onclick="window.clearTaskFilters()">清除篩選</button>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                <div style="flex: 1; min-width: 140px;">
+                                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
+                                    <input type="text" id="taskFilterKeyword" class="form-control" placeholder="保全姓名、路線名稱..." onkeyup="window.applyTaskFilters()" style="padding: 8px;">
+                                </div>
+                                <div style="flex: 1; min-width: 120px;">
+                                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 開始日期</label>
+                                    <input type="date" id="taskFilterStartDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
+                                </div>
+                                <div style="flex: 1; min-width: 120px;">
+                                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📅 結束日期</label>
+                                    <input type="date" id="taskFilterEndDate" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
+                                </div>
+                                <div style="flex: 1; min-width: 110px;">
+                                    <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">📌 任務狀態</label>
+                                    <select id="taskFilterStatus" class="form-control" onchange="window.applyTaskFilters()" style="padding: 8px;">
+                                        <option value="all">全部狀態</option>
+                                        <option value="completed">✅ 已完成</option>
+                                        <option value="incomplete">⏳ 執行中</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                                 <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
                                 <input type="text" id="taskFilterKeyword" class="form-control" placeholder="保全姓名、路線名稱..." onkeyup="window.applyTaskFilters()" style="padding: 8px;">
                             </div>
