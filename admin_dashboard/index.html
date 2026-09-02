@@ -214,10 +214,18 @@
                 
                 <div class="card">
                     <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <h3 style="margin: 0;">🛡️ 巡邏任務即時監控列表</h3>
-                            <!-- 🌟 新增：批次匯出按鈕 -->
-                            <button id="batchExportBtn" class="btn btn-info" style="margin:0;" onclick="window.batchExportTasks()">📥 批次合併匯出勾選報表</button>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <!-- 🌟 批次封面 PDF 編輯器觸發區 -->
+                                <div style="background: #e8f0fe; padding: 5px 10px; border-radius: 6px; border: 1px solid #d2e3fc; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 13px; font-weight: bold; color: var(--primary);">📎 封面(PDF):</span>
+                                    <button type="button" class="btn btn-primary" style="padding: 5px 10px; font-size: 12px; margin: 0;" onclick="window.triggerPdfSelect()">📁 選擇並編輯</button>
+                                    <span class="pdf-status-text" style="font-size: 12px; color: #666; font-weight: bold;">尚未選擇</span>
+                                    <button type="button" class="btn btn-danger btn-clear-pdf" style="display:none; padding: 4px 8px; font-size: 11px; margin: 0;" onclick="window.clearCoverPdf()">❌ 移除</button>
+                                </div>
+                                <button id="batchExportBtn" class="btn btn-info" style="margin:0;" onclick="window.batchExportTasks()">📥 批次合併匯出</button>
+                            </div>
                         </div>
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
                             <div style="flex: 1; min-width: 140px;">
@@ -465,9 +473,12 @@
             
             <!-- 🌟 新增：封面 PDF 選擇區塊 -->
             <div style="margin-bottom: 15px; padding: 12px; background: #e8f0fe; border-radius: 8px; border: 1px solid #d2e3fc;">
-                <label style="font-size: 14px; font-weight: bold; color: var(--primary); display:block; margin-bottom:5px;">📎 附加自訂封面 PDF (可選擇多個檔案)</label>
-                <input type="file" id="coverPdfInput" accept=".pdf" multiple class="form-control" style="background: white; padding: 6px;">
-                <small style="color:#666;">點擊下方匯出時，選取的 PDF 將會自動與報表合併，並放在最前面。</small>
+                <label style="font-size: 14px; font-weight: bold; color: var(--primary); display:block; margin-bottom:5px;">📎 附加自訂封面 PDF</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" class="btn btn-primary" style="padding: 8px 15px; font-size: 13px; margin: 0;" onclick="window.triggerPdfSelect()">📁 選擇檔案並編輯</button>
+                    <span class="pdf-status-text" style="font-size: 13px; color: #666; font-weight: bold;">尚未選擇</span>
+                    <button type="button" class="btn btn-danger btn-clear-pdf" style="display:none; padding: 8px 12px; font-size: 12px; margin: 0;" onclick="window.clearCoverPdf()">❌ 移除</button>
+                </div>
             </div>
 
             <div id="taskExportArea">
@@ -660,6 +671,24 @@
             
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button class="btn btn-primary" style="flex: 1;" onclick="document.getElementById('issuedWorkOrdersModal').classList.remove('active')">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="hiddenPdfInput" accept=".pdf" multiple style="display: none;" onchange="window.handleCoverPdfSelect(event)">
+
+    <!-- 🌟 視覺化 PDF 頁面編輯器彈窗 -->
+    <div id="pdfEditorModal" class="modal">
+        <div class="modal-content" style="width: 900px; max-width: 95%; background: #f8f9fa;">
+            <h3 style="color: var(--primary); margin-top: 0;">📄 編輯與整理附加封面 PDF</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px;">您可以旋轉方向不對的頁面，或刪除不需要的頁面。</p>
+            
+            <div id="pdfThumbnailsContainer" style="display: flex; gap: 15px; overflow-x: auto; padding: 15px; background: #e2e3e5; border: 1px solid #ccc; border-radius: 8px; min-height: 250px;">
+                <!-- 縮圖預覽會生成在此處 -->
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-success" style="flex: 2; padding: 12px; font-size: 16px;" onclick="window.saveEditedPdf()">✅ 確認套用並儲存</button>
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('pdfEditorModal').classList.remove('active')">取消</button>
             </div>
         </div>
     </div>
@@ -1494,7 +1523,7 @@
             return html;
         };
 
-        window.viewTaskDetail = function(taskId) {
+        window.viewTaskDetail = function(taskId) {66666666666666666666666666666666666666666
             const task = dbTasks.find(t => t.id === taskId);
             if (!task) return;
             document.getElementById('taskDetailTitle').innerText = `📋 任務報表：${task.routeName}`;
