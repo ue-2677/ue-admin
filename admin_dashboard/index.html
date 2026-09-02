@@ -2040,6 +2040,7 @@
         };
 
         // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
+        // 🌟 新增：批次匯出勾選的任務，並合併成單一巨大 PDF
         window.batchExportTasks = async function() {
             const checkboxes = document.querySelectorAll('.task-checkbox:checked');
             if (checkboxes.length === 0) { alert("請先勾選您要匯出的任務報表！"); return; }
@@ -2048,9 +2049,30 @@
             btn.innerText = "⏳ 產生中..."; 
             btn.disabled = true;
 
-            const coverInput = document.getElementById('batchCoverPdfInput'); // 🌟 讀取批次封面
+            const coverInput = document.getElementById('batchCoverPdfInput'); // 讀取批次封面
 
-            // 🌟 白畫面修復關鍵 1：暫時解除 body 的高度與裁切限制，避免報表內容被切斷
+            // 🌟 完美修復 1：建立全螢幕深色 Loading 遮罩，蓋住閃爍的渲染過程
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.style.position = 'fixed';
+            loadingOverlay.style.top = '0';
+            loadingOverlay.style.left = '0';
+            loadingOverlay.style.width = '100%';
+            loadingOverlay.style.height = '100%';
+            loadingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+            loadingOverlay.style.color = 'white';
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.flexDirection = 'column';
+            loadingOverlay.style.justifyContent = 'center';
+            loadingOverlay.style.alignItems = 'center';
+            loadingOverlay.style.zIndex = '999999'; // 最高層級，擋住一切
+            loadingOverlay.innerHTML = `
+                <div style="font-size: 50px; margin-bottom: 20px;">📄</div>
+                <h2 style="margin: 0 0 10px 0;">批次報表合併產生中</h2>
+                <p style="color: #ccc; font-size: 14px;">包含照片與排版渲染，可能需要數十秒鐘，請勿關閉視窗...</p>
+            `;
+            document.body.appendChild(loadingOverlay);
+
+            // 解除 body 的高度限制，讓過長的報表不會被裁切
             const origOverflow = document.body.style.overflow;
             const origHeight = document.body.style.height;
             document.body.style.overflow = 'visible';
@@ -2060,7 +2082,7 @@
                 const { PDFDocument } = PDFLib;
                 const megaPdf = await PDFDocument.create();
 
-                // 🌟 如果有選擇批次封面，先將封面合併在最前面
+                // 處理使用者上傳的封面
                 if (coverInput && coverInput.files.length > 0) {
                     for (let file of coverInput.files) {
                         const fileBytes = await file.arrayBuffer();
@@ -2070,17 +2092,15 @@
                     }
                 }
 
-                // 建立一個隱藏的 div 來讓 html2pdf 渲染每一份報表
+                // 🌟 完美修復 2：建立渲染容器，將它放在 Loading 遮罩下方，確保背景是純白且在最上層
                 const tempContainer = document.createElement('div');
                 tempContainer.style.position = 'absolute';
-                
-                // 🌟 白畫面修復關鍵 2：不能使用 left: -9999px，要放在畫面上但利用 z-index 藏在背景底層
                 tempContainer.style.top = '0';
                 tempContainer.style.left = '0';
-                tempContainer.style.zIndex = '-1000'; 
-                tempContainer.style.width = '800px';
+                tempContainer.style.width = '800px'; // 固定 A4 比例寬度
                 tempContainer.style.padding = '20px';
                 tempContainer.style.background = 'white';
+                tempContainer.style.zIndex = '1000'; // 確保在系統背景之上，但被 Loading 遮罩擋住
                 document.body.appendChild(tempContainer);
 
                 // 逐一處理勾選的任務
@@ -2088,30 +2108,28 @@
                     const task = dbTasks.find(t => t.id === chk.value);
                     if (!task) continue;
 
-                    // 填入該任務的 HTML
                     tempContainer.innerHTML = `<h2 style="color:var(--primary); margin-bottom: 20px;">🏢 大樓巡邏系統 - 獨立報表</h2>` + window.buildTaskReportHtml(task);
-                    
-                    // 將不需要的轉派按鈕移除
                     tempContainer.querySelectorAll('.pdf-hide-btn').forEach(b => b.remove());
 
-                    // 🌟 加入防破版的 pagebreak 設定與 windowWidth 穩定畫布
+                    // 🌟 完美修復 3：給予 300 毫秒的緩衝時間，確保圖片都載入完成再截圖
+                    await new Promise(resolve => setTimeout(resolve, 300));
+
                     const pdfWorker = html2pdf().set({
                         margin: [10, 10, 15, 10], 
                         html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break', 'h2', 'h4'] } 
+                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break'] }
                     }).from(tempContainer);
                     
                     const reportBlob = await pdfWorker.output('blob');
                     const reportBytes = await reportBlob.arrayBuffer();
 
-                    // 將這份報告的頁面合併進總 PDF 中
                     const reportDoc = await PDFDocument.load(reportBytes);
                     const pages = await megaPdf.copyPages(reportDoc, reportDoc.getPageIndices());
                     pages.forEach(p => megaPdf.addPage(p));
                 }
 
-                document.body.removeChild(tempContainer); // 清除隱藏容器
+                document.body.removeChild(tempContainer);
 
                 // 輸出最終大 PDF 並下載
                 const finalBytes = await megaPdf.save();
@@ -2125,9 +2143,10 @@
                 alert("批次合併匯出失敗：" + err.message);
                 console.error(err);
             } finally {
-                // 🌟 匯出完畢後，恢復 body 原本的版面限制
+                // 復原畫面狀態，移除 Loading 遮罩
                 document.body.style.overflow = origOverflow;
                 document.body.style.height = origHeight;
+                if(document.body.contains(loadingOverlay)) document.body.removeChild(loadingOverlay);
 
                 btn.innerText = "📥 批次合併匯出"; 
                 btn.disabled = false;
