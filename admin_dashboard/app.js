@@ -1454,7 +1454,7 @@ window.loadRoutesData = function() {
         const groupId = `route-group-${groupIndex}`;
         const subRouteCount = groupedRoutes[groupName].length;
 
-        // 畫出主路線標題列 (加入 onclick 事件與箭頭)
+        // 🌟 修改 1：預設箭頭轉向 -90 度 (並加上 display: inline-block 確保旋轉有效)
         tbody.innerHTML += `
             <tr style="background-color: #e8f0fe; cursor: pointer; user-select: none;" onclick="window.toggleRouteGroup('${groupId}', this)">
                 <td colspan="6" style="padding: 10px 15px; border-left: 4px solid var(--primary);">
@@ -1463,13 +1463,13 @@ window.loadRoutesData = function() {
                             <strong style="color: var(--primary); font-size: 15px;">📂 主路線群組：${window.escapeHTML(groupName)}</strong>
                             <span style="font-size: 12px; color: #666; margin-left: 8px; font-weight: normal;">(共 ${subRouteCount} 條路線)</span>
                         </span>
-                        <span class="group-arrow" style="transition: transform 0.2s; color: var(--primary); font-size: 12px;">▼</span>
+                        <span class="group-arrow" style="transition: transform 0.2s; color: var(--primary); font-size: 12px; display: inline-block; transform: rotate(-90deg);">▼</span>
                     </div>
                 </td>
             </tr>
         `;
 
-        // 畫出該主路線底下的獨立子路線 (預設展開，綁定 class)
+        // 畫出該主路線底下的獨立子路線
         groupedRoutes[groupName].forEach((route) => {
             const globalInt = route.globalInterval || 0;
             const safePoints = route.points || []; 
@@ -1482,8 +1482,8 @@ window.loadRoutesData = function() {
             
             const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
             
-            // 🌟 賦予專屬 groupId 作為 class
-            tbody.innerHTML += `<tr class="${groupId}">
+            // 🌟 修改 2：這裡加上 style="display: none;" 讓它預設藏起來
+            tbody.innerHTML += `<tr class="${groupId}" style="display: none;">
                 <td style="padding-left: 30px;"><b style="font-size:14px; color:#666;">${route.routeOrder || '-'}</b></td>
                 <td><strong>${window.escapeHTML(route.name || '未命名路線')}</strong></td>
                 <td>${statusBadge}</td>
