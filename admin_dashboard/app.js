@@ -1404,6 +1404,7 @@ window.handleImportRoutes = function(event) {
 };
 
 // 🌟 改良：將表格改為「依主路線分組」的視覺化結構
+// 🌟 改良：依主路線「資料夾」分群顯示
 window.loadRoutesData = function() {
     const tbody = document.getElementById('routesTableBody'); if (!tbody) return; tbody.innerHTML = '';
     let keyword = document.getElementById('routeFilterKeyword') ? document.getElementById('routeFilterKeyword').value.toLowerCase().trim() : "";
@@ -1411,7 +1412,7 @@ window.loadRoutesData = function() {
 
     if (keyword) routes = routes.filter(r => (r.name && r.name.toLowerCase().includes(keyword)) || (r.mainRoute && r.mainRoute.toLowerCase().includes(keyword)));
     
-    // 內部子路線排序規則
+    // 子路線的排序規則
     routes.sort((a, b) => {
         if (window.routeSortState.col === 'order') {
             let valA = a.routeOrder || 999; let valB = b.routeOrder || 999;
@@ -1428,7 +1429,7 @@ window.loadRoutesData = function() {
 
     if (!routes || routes.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前尚無符合的路線資料。</td></tr>'; return; }
     
-    // 🌟 核心分組邏輯
+    // 🌟 將路線進行主路線群組歸類
     let groupedRoutes = {};
     routes.forEach(r => {
         let key = r.mainRoute ? r.mainRoute.trim() : '📌 獨立路線 (未分類)';
@@ -1436,7 +1437,7 @@ window.loadRoutesData = function() {
         groupedRoutes[key].push(r);
     });
 
-    // 讓「獨立路線」永遠排在最後面，其他主路線依字母排序
+    // 將群組名稱依字母排序 (獨立路線放最後)
     let groupKeys = Object.keys(groupedRoutes).sort((a, b) => {
         if (a === '📌 獨立路線 (未分類)') return 1;
         if (b === '📌 獨立路線 (未分類)') return -1;
@@ -1484,24 +1485,24 @@ window.loadRoutesData = function() {
 window.openRouteModal = function(routeId = null) {
     const container = document.getElementById('pointsInputContainer'); container.innerHTML = '';
     
-    // 🌟 更新主路線的 Datalist (記憶功能)
+    // 🌟 更新主路線的歷史選單
     const dataList = document.getElementById('mainRouteDatalist');
     if (dataList) {
         dataList.innerHTML = '';
         const uniqueMains = [...new Set(dbRoutes.map(r => r.mainRoute).filter(Boolean))];
-        uniqueMains.forEach(m => dataList.innerHTML += `<option value="${m}"></option>`);
+        uniqueMains.forEach(m => dataList.innerHTML += `<option value="${window.escapeHTML(m)}"></option>`);
     }
 
     if (routeId) {
         const route = dbRoutes.find(r => r.id === routeId);
         document.getElementById('routeModalTitle').innerText = "編輯巡邏路線"; document.getElementById('editRouteId').value = routeId;
-        document.getElementById('routeModalMainRoute').value = route.mainRoute || ''; // 🌟 讀取主路線
+        document.getElementById('routeModalMainRoute').value = route.mainRoute || ''; // 讀取主路線
         document.getElementById('routeModalName').value = route.name; document.getElementById('routeModalOrder').value = route.routeOrder || 1;
         document.getElementById('routeModalGlobalInterval').value = route.globalInterval || 0; document.getElementById('routeModalActive').checked = route.isActive !== false;
         route.points.forEach((pt, idx) => { window.addPointInputRow(pt, idx + 1, (route.pointIntervals && route.pointIntervals[idx] !== undefined) ? route.pointIntervals[idx] : 0); });
     } else {
         document.getElementById('routeModalTitle').innerText = "新增巡邏路線"; document.getElementById('editRouteId').value = "";
-        document.getElementById('routeModalMainRoute').value = ''; // 🌟 清空主路線
+        document.getElementById('routeModalMainRoute').value = ''; // 清空主路線
         document.getElementById('routeModalName').value = ""; document.getElementById('routeModalOrder').value = dbRoutes.length + 1;
         document.getElementById('routeModalGlobalInterval').value = 0; document.getElementById('routeModalActive').checked = true;
         window.addPointInputRow('', 1, 0); window.addPointInputRow('', 2, 0);
@@ -1557,7 +1558,7 @@ window.reorderUI = function() {
 };
 
 window.saveRoute = async function() {
-    const mainRoute = document.getElementById('routeModalMainRoute').value.trim(); // 🌟 儲存主路線
+    const mainRoute = document.getElementById('routeModalMainRoute').value.trim(); // 🌟 讀取主路線
     const name = document.getElementById('routeModalName').value.trim();
     const editIdx = document.getElementById('editRouteId').value;
     const routeOrder = parseInt(document.getElementById('routeModalOrder').value) || 999;
@@ -1577,8 +1578,9 @@ window.saveRoute = async function() {
     if (new Set(pointsData.map(p => p.order)).size !== pointsData.length) { alert("⚠️ 儲存失敗：發現相同的次序數字！"); return; }
     pointsData.sort((a, b) => a.order - b.order);
     
+    // 🌟 將主路線與子路線獨立封裝，保證絕對不會影響到別的路線
     const payload = { 
-        mainRoute: mainRoute, // 🌟 寫入 Firebase
+        mainRoute: mainRoute, 
         name: name, 
         points: pointsData.map(p => p.name), 
         pointIntervals: pointsData.map(p => p.interval), 
@@ -1588,8 +1590,13 @@ window.saveRoute = async function() {
     };
     
     try {
-        if (editIdx !== "") { await updateDoc(doc(db, "routes", editIdx), payload); } else { await addDoc(collection(db, "routes"), payload); }
-        window.closeModal('routeModal'); alert("路線設定已儲存至雲端！");
+        if (editIdx !== "") { 
+            await updateDoc(doc(db, "routes", editIdx), payload); 
+        } else { 
+            await addDoc(collection(db, "routes"), payload); 
+        }
+        window.closeModal('routeModal'); 
+        alert("路線設定已儲存至雲端！");
     } catch(e) { alert("儲存失敗"); }
 };
 
