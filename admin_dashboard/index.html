@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統載入中...</title>
+    <script>
+        // 瞬間偵測裝置寬度並進行內部路由分流
+        if (window.innerWidth <= 768) {
+            window.location.replace('mobile.html');
+        } else {
+            window.location.replace('admin.html');
+        }
+    </script>
+</head>
+<body style="background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; color: #666;">
+    <h2>🔄 正在載入對應介面...</h2>
+</body>
+</html>
