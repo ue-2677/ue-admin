@@ -1411,15 +1411,12 @@ window.loadRoutesData = function() {
     tbody.innerHTML = '';
     
     let keyword = document.getElementById('routeFilterKeyword') ? document.getElementById('routeFilterKeyword').value.toLowerCase().trim() : "";
-    
-    // 使用深拷貝確保資料絕對不連動
     let routes = JSON.parse(JSON.stringify(dbRoutes));
 
     if (keyword) {
         routes = routes.filter(r => (r.name && r.name.toLowerCase().includes(keyword)) || (r.mainRoute && r.mainRoute.toLowerCase().includes(keyword)));
     }
     
-    // 子路線的排序規則
     routes.sort((a, b) => {
         if (window.routeSortState.col === 'order') {
             let valA = a.routeOrder || 999; let valB = b.routeOrder || 999;
@@ -1439,7 +1436,6 @@ window.loadRoutesData = function() {
         return; 
     }
     
-    // 🌟 將路線進行主路線群組歸類
     let groupedRoutes = {};
     routes.forEach(r => {
         let key = r.mainRoute ? r.mainRoute.trim() : '📌 獨立路線 (未分類)';
@@ -1447,24 +1443,33 @@ window.loadRoutesData = function() {
         groupedRoutes[key].push(r);
     });
 
-    // 將群組名稱依字母排序 (獨立路線放最後)
     let groupKeys = Object.keys(groupedRoutes).sort((a, b) => {
         if (a === '📌 獨立路線 (未分類)') return 1;
         if (b === '📌 獨立路線 (未分類)') return -1;
         return a.localeCompare(b);
     });
 
-    groupKeys.forEach(groupName => {
-        // 畫出主路線標題列
+    // 🌟 遍歷畫出群組與子路線
+    groupKeys.forEach((groupName, groupIndex) => {
+        const groupId = `route-group-${groupIndex}`;
+        const subRouteCount = groupedRoutes[groupName].length;
+
+        // 畫出主路線標題列 (加入 onclick 事件與箭頭)
         tbody.innerHTML += `
-            <tr style="background-color: #e8f0fe;">
+            <tr style="background-color: #e8f0fe; cursor: pointer; user-select: none;" onclick="window.toggleRouteGroup('${groupId}', this)">
                 <td colspan="6" style="padding: 10px 15px; border-left: 4px solid var(--primary);">
-                    <strong style="color: var(--primary); font-size: 15px;">📂 主路線群組：${window.escapeHTML(groupName)}</strong>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>
+                            <strong style="color: var(--primary); font-size: 15px;">📂 主路線群組：${window.escapeHTML(groupName)}</strong>
+                            <span style="font-size: 12px; color: #666; margin-left: 8px; font-weight: normal;">(共 ${subRouteCount} 條路線)</span>
+                        </span>
+                        <span class="group-arrow" style="transition: transform 0.2s; color: var(--primary); font-size: 12px;">▼</span>
+                    </div>
                 </td>
             </tr>
         `;
 
-        // 畫出該主路線底下的獨立子路線
+        // 畫出該主路線底下的獨立子路線 (預設展開，綁定 class)
         groupedRoutes[groupName].forEach((route) => {
             const globalInt = route.globalInterval || 0;
             const safePoints = route.points || []; 
@@ -1477,7 +1482,8 @@ window.loadRoutesData = function() {
             
             const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
             
-            tbody.innerHTML += `<tr>
+            // 🌟 賦予專屬 groupId 作為 class
+            tbody.innerHTML += `<tr class="${groupId}">
                 <td style="padding-left: 30px;"><b style="font-size:14px; color:#666;">${route.routeOrder || '-'}</b></td>
                 <td><strong>${window.escapeHTML(route.name || '未命名路線')}</strong></td>
                 <td>${statusBadge}</td>
@@ -1492,6 +1498,26 @@ window.loadRoutesData = function() {
     });
 };
 
+// 🌟 新增：點擊主路線群組時的展開/收起邏輯
+window.toggleRouteGroup = function(groupId, headerRow) {
+    const rows = document.querySelectorAll(`.${groupId}`);
+    const arrow = headerRow.querySelector('.group-arrow');
+    
+    let isHidden = false;
+    if (rows.length > 0) {
+        isHidden = rows[0].style.display === 'none'; // 檢查目前是否為隱藏狀態
+    }
+
+    // 切換子路線的顯示/隱藏
+    rows.forEach(row => {
+        row.style.display = isHidden ? '' : 'none';
+    });
+
+    // 切換箭頭的旋轉動畫 (▼ 變成 ◀)
+    if (arrow) {
+        arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+    }
+};
 window.openRouteModal = function(routeId = null) {
     const container = document.getElementById('pointsInputContainer'); 
     container.innerHTML = '';
