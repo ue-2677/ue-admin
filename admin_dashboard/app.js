@@ -7,7 +7,23 @@ import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePass
 
 window.escapeHTML = escapeHTML;
 window.getLocalDateStr = getLocalDateStr;
-
+// 🌟 智慧樓層排序器：R/F 最高，接著高樓層到低樓層，最後地下與地庫
+window.sortFloorsArray = function(floors) {
+    return floors.sort((a, b) => {
+        const getScore = (f) => {
+            const str = (f || '').toString().toUpperCase();
+            if (str.includes('R') || str.includes('頂樓') || str.includes('天台')) return 99999; // R/F 最高
+            if (str.includes('B') || str.includes('地庫')) {
+                const num = parseInt(str.replace(/[^0-9]/g, '')) || 1;
+                return -num; // B1 為 -1，B2 為 -2
+            }
+            if (str.includes('G') || str.includes('地下')) return 0; // 地下層
+            const num = parseInt(str.replace(/[^0-9]/g, ''));
+            return isNaN(num) ? 50000 : num; // 一般數字樓層
+        };
+        return getScore(b) - getScore(a); // 降冪排列 (由大到小)
+    });
+};
 let dbUsers = {}; let dbRoutes = []; let dbPoints = []; let dbUidMappings = {};
 let dbTasks = []; let dbAssistantRequests = []; let dbNotices = [];
 let currentUser = null; const VIRTUAL_DOMAIN = "@patrol.com";
@@ -1292,12 +1308,13 @@ window.loadPointsData = function() {
 };
 
 window.openPointModal = function(ptId = null) {
-    const uniqueFloors = [...new Set(dbPoints.map(p => p.floor))];
+    // 🌟 套用智慧排序
+    const uniqueFloors = window.sortFloorsArray([...new Set(dbPoints.map(p => p.floor).filter(Boolean))]);
     const dataList = document.getElementById('floorDatalist');
     const kwContainer = document.getElementById('quickFloorKeywords');
     if(dataList) dataList.innerHTML = ''; 
     if(kwContainer) kwContainer.innerHTML = '<span style="font-size:12px; color:#666;">快速加入：</span>';
-    const commonKeywords = ['A棟', 'B棟', '1F', 'B1', 'RF'];
+    const commonKeywords = ['R/F', 'A棟', 'B棟', '1F', 'B1'];
     commonKeywords.forEach(kw => { if(kwContainer) kwContainer.innerHTML += `<span class="badge badge-warning" style="cursor:pointer; user-select:none;" onclick="window.appendFloorText('${kw}')">+ ${kw}</span>`; });
     uniqueFloors.forEach(f => {
         if(dataList) dataList.innerHTML += `<option value="${f}"></option>`;
@@ -1563,7 +1580,10 @@ window.openRouteModal = function(routeId = null) {
 window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxInterval = 0) {
     const container = document.getElementById('pointsInputContainer');
     if (orderNumber === null) orderNumber = container.children.length + 1;
-    const uniqueFloors = [...new Set(dbPoints.map(p => p.floor))];
+    
+    // 🌟 套用智慧排序，讓點選路線點位時樓層井然有序
+    const uniqueFloors = window.sortFloorsArray([...new Set(dbPoints.map(p => p.floor).filter(Boolean))]);
+    
     let selectedFloor = '', selectedName = '';
     if (fullPointName) {
         const found = dbPoints.find(p => `${p.floor} ${p.name}` === fullPointName);
@@ -1571,6 +1591,7 @@ window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxIn
     }
     let floorOpts = '<option value="">-- 選樓層 --</option>';
     uniqueFloors.forEach(f => { floorOpts += `<option value="${f}" ${f === selectedFloor ? 'selected' : ''}>${f}</option>`; });
+    
     const div = document.createElement('div'); div.className = 'point-input-row';
     div.innerHTML = `
         <input type="number" class="form-control point-order" value="${orderNumber}" onchange="window.handleOrderChange(this)" style="width: 60px; text-align: center; font-weight: bold; background: #e8f0fe;">
