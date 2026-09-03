@@ -1761,9 +1761,27 @@
                     <td>${Math.min(task.currentPointIndex || 0, (task.points || []).length)} / ${(task.points || []).length}</td>
                     <td>${alertBadge}</td>
                     <td>${statusBadge}</td>
-                    <td><button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px; margin:0;" onclick="window.viewTaskDetail('${task.id}')">🔍 查看</button></td>
+                    <td style="white-space: nowrap;">
+                        <button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px; margin:0;" onclick="window.viewTaskDetail('${task.id}')">🔍 查看</button>
+                        <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px; margin:0; margin-left: 4px;" onclick="window.deleteTask('${task.id}')">🗑️ 刪除</button>
+                    </td>
                 </tr>`;
             });
+        };
+
+        // 🌟 新增：刪除無效或執行中的巡邏任務
+        window.deleteTask = async function(taskId) {
+            if(confirm("確定要刪除這筆巡邏任務嗎？\n(此功能通常用於清除員工誤開、或一直卡在執行中的無效任務)")) {
+                try {
+                    const taskData = dbTasks.find(t => t.id === taskId) || { id: taskId };
+                    // 寫入刪除稽核軌跡，確保安全性
+                    await window.logDeletion("巡邏任務紀錄", taskData);
+                    // 從資料庫移除
+                    await deleteDoc(doc(db, "tasks", taskId));
+                } catch(e) {
+                    alert("刪除失敗，請檢查網路連線。");
+                }
+            }
         };
 
         window.buildTaskReportHtml = function(task) {
