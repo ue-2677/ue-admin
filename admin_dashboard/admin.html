@@ -423,7 +423,20 @@
         <div class="modal-content" style="width:750px;">
             <h3 id="routeModalTitle">新增巡邏路線</h3>
             <input type="hidden" id="editRouteId">
-            <div class="form-group"><label>路線名稱</label><input type="text" id="routeModalName" class="form-control" placeholder="例如：C棟 地下停車場巡視"></div>
+            
+            <!-- 🌟 新增：主路線與子路線的組合輸入框 -->
+            <div class="form-group" style="display: flex; gap: 15px;">
+                <div style="flex: 1;">
+                    <label>📂 主路線群組 (選填)</label>
+                    <input type="text" id="routeModalMainRoute" class="form-control" placeholder="例如：R1" list="mainRouteDatalist">
+                    <datalist id="mainRouteDatalist"></datalist>
+                </div>
+                <div style="flex: 2;">
+                    <label>📍 子路線名稱</label>
+                    <input type="text" id="routeModalName" class="form-control" placeholder="例如：R1(1) 停車場巡視">
+                </div>
+            </div>
+            
             <div class="form-group" style="display: flex; gap: 15px;">
                 <div style="flex: 1;"><label>顯示順序</label><input type="number" id="routeModalOrder" class="form-control" value="1"></div>
                 <div style="flex: 1.2;"><label>統一點位限時 (分，0為無)</label><input type="number" id="routeModalGlobalInterval" class="form-control" value="0" min="0" placeholder="未設獨立限時將套用此值"></div>
