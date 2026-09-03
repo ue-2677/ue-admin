@@ -1405,12 +1405,20 @@ window.handleImportRoutes = function(event) {
 
 // 🌟 改良：將表格改為「依主路線分組」的視覺化結構
 // 🌟 改良：依主路線「資料夾」分群顯示
+// 🌟 路線表格載入 (絕對隔離版：保證子路線獨立分群)
 window.loadRoutesData = function() {
-    const tbody = document.getElementById('routesTableBody'); if (!tbody) return; tbody.innerHTML = '';
+    const tbody = document.getElementById('routesTableBody'); 
+    if (!tbody) return; 
+    tbody.innerHTML = '';
+    
     let keyword = document.getElementById('routeFilterKeyword') ? document.getElementById('routeFilterKeyword').value.toLowerCase().trim() : "";
-    let routes = [...dbRoutes];
+    
+    // 使用深拷貝確保資料絕對不連動
+    let routes = JSON.parse(JSON.stringify(dbRoutes));
 
-    if (keyword) routes = routes.filter(r => (r.name && r.name.toLowerCase().includes(keyword)) || (r.mainRoute && r.mainRoute.toLowerCase().includes(keyword)));
+    if (keyword) {
+        routes = routes.filter(r => (r.name && r.name.toLowerCase().includes(keyword)) || (r.mainRoute && r.mainRoute.toLowerCase().includes(keyword)));
+    }
     
     // 子路線的排序規則
     routes.sort((a, b) => {
@@ -1427,7 +1435,10 @@ window.loadRoutesData = function() {
     if(document.getElementById('sort-route-order')) document.getElementById('sort-route-order').innerText = window.routeSortState.col === 'order' ? (window.routeSortState.desc ? '▼' : '▲') : '';
     if(document.getElementById('sort-route-name')) document.getElementById('sort-route-name').innerText = window.routeSortState.col === 'name' ? (window.routeSortState.desc ? '▼' : '▲') : '';
 
-    if (!routes || routes.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前尚無符合的路線資料。</td></tr>'; return; }
+    if (!routes || routes.length === 0) { 
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前尚無符合的路線資料。</td></tr>'; 
+        return; 
+    }
     
     // 🌟 將路線進行主路線群組歸類
     let groupedRoutes = {};
@@ -1449,12 +1460,12 @@ window.loadRoutesData = function() {
         tbody.innerHTML += `
             <tr style="background-color: #e8f0fe;">
                 <td colspan="6" style="padding: 10px 15px; border-left: 4px solid var(--primary);">
-                    <strong style="color: var(--primary); font-size: 15px;">📂 ${window.escapeHTML(groupName)}</strong>
+                    <strong style="color: var(--primary); font-size: 15px;">📂 主路線群組：${window.escapeHTML(groupName)}</strong>
                 </td>
             </tr>
         `;
 
-        // 畫出該主路線底下的子路線
+        // 畫出該主路線底下的獨立子路線
         groupedRoutes[groupName].forEach((route) => {
             const globalInt = route.globalInterval || 0;
             const safePoints = route.points || []; 
@@ -1473,9 +1484,9 @@ window.loadRoutesData = function() {
                 <td>${statusBadge}</td>
                 <td>${safePoints.length} 點</td>
                 <td style="font-size:13px; color:#555;">${formattedPoints || '<span style="color:#aaa;">無點位</span>'}</td>
-                <td>
-                    <button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editRoute('${route.id}')">✏️ 編輯</button>
-                    <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteRoute('${route.id}')">🗑️ 刪除</button>
+                <td style="white-space: nowrap;">
+                    <button class="btn btn-warning" style="padding: 4px 8px; font-size:12px; margin:0;" onclick="window.editRoute('${route.id}')">✏️ 編輯</button>
+                    <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px; margin:0; margin-left: 4px;" onclick="window.deleteRoute('${route.id}')">🗑️ 刪除</button>
                 </td>
             </tr>`;
         });
@@ -1483,9 +1494,10 @@ window.loadRoutesData = function() {
 };
 
 window.openRouteModal = function(routeId = null) {
-    const container = document.getElementById('pointsInputContainer'); container.innerHTML = '';
+    const container = document.getElementById('pointsInputContainer'); 
+    container.innerHTML = '';
     
-    // 🌟 更新主路線的歷史選單
+    // 🌟 更新主路線的歷史下拉選單
     const dataList = document.getElementById('mainRouteDatalist');
     if (dataList) {
         dataList.innerHTML = '';
@@ -1495,17 +1507,30 @@ window.openRouteModal = function(routeId = null) {
 
     if (routeId) {
         const route = dbRoutes.find(r => r.id === routeId);
-        document.getElementById('routeModalTitle').innerText = "編輯巡邏路線"; document.getElementById('editRouteId').value = routeId;
-        document.getElementById('routeModalMainRoute').value = route.mainRoute || ''; // 讀取主路線
-        document.getElementById('routeModalName').value = route.name; document.getElementById('routeModalOrder').value = route.routeOrder || 1;
-        document.getElementById('routeModalGlobalInterval').value = route.globalInterval || 0; document.getElementById('routeModalActive').checked = route.isActive !== false;
-        route.points.forEach((pt, idx) => { window.addPointInputRow(pt, idx + 1, (route.pointIntervals && route.pointIntervals[idx] !== undefined) ? route.pointIntervals[idx] : 0); });
+        document.getElementById('routeModalTitle').innerText = "編輯巡邏路線"; 
+        document.getElementById('editRouteId').value = routeId;
+        
+        // 絕對獨立給值
+        document.getElementById('routeModalMainRoute').value = route.mainRoute ? route.mainRoute : ''; 
+        document.getElementById('routeModalName').value = route.name ? route.name : ''; 
+        document.getElementById('routeModalOrder').value = route.routeOrder || 1;
+        document.getElementById('routeModalGlobalInterval').value = route.globalInterval || 0; 
+        document.getElementById('routeModalActive').checked = route.isActive !== false;
+        
+        route.points.forEach((pt, idx) => { 
+            window.addPointInputRow(pt, idx + 1, (route.pointIntervals && route.pointIntervals[idx] !== undefined) ? route.pointIntervals[idx] : 0); 
+        });
     } else {
-        document.getElementById('routeModalTitle').innerText = "新增巡邏路線"; document.getElementById('editRouteId').value = "";
-        document.getElementById('routeModalMainRoute').value = ''; // 清空主路線
-        document.getElementById('routeModalName').value = ""; document.getElementById('routeModalOrder').value = dbRoutes.length + 1;
-        document.getElementById('routeModalGlobalInterval').value = 0; document.getElementById('routeModalActive').checked = true;
-        window.addPointInputRow('', 1, 0); window.addPointInputRow('', 2, 0);
+        document.getElementById('routeModalTitle').innerText = "新增巡邏路線"; 
+        document.getElementById('editRouteId').value = "";
+        document.getElementById('routeModalMainRoute').value = ''; 
+        document.getElementById('routeModalName').value = ""; 
+        document.getElementById('routeModalOrder').value = dbRoutes.length + 1;
+        document.getElementById('routeModalGlobalInterval').value = 0; 
+        document.getElementById('routeModalActive').checked = true;
+        
+        window.addPointInputRow('', 1, 0); 
+        window.addPointInputRow('', 2, 0);
     }
     document.getElementById('routeModal').classList.add('active');
 };
@@ -1558,9 +1583,10 @@ window.reorderUI = function() {
 };
 
 window.saveRoute = async function() {
-    const mainRoute = document.getElementById('routeModalMainRoute').value.trim(); // 🌟 讀取主路線
-    const name = document.getElementById('routeModalName').value.trim();
-    const editIdx = document.getElementById('editRouteId').value;
+    // 🌟 保證只抓取當下輸入框的值，不受其他路線干擾
+    const currentMainRoute = document.getElementById('routeModalMainRoute').value.trim(); 
+    const currentName = document.getElementById('routeModalName').value.trim();
+    const targetRouteId = document.getElementById('editRouteId').value;
     const routeOrder = parseInt(document.getElementById('routeModalOrder').value) || 999;
     const isActive = document.getElementById('routeModalActive').checked;
     const globalInterval = parseInt(document.getElementById('routeModalGlobalInterval').value) || 0;
@@ -1568,20 +1594,22 @@ window.saveRoute = async function() {
     let pointsData = [];
     document.querySelectorAll('.point-input-row').forEach(row => {
         const order = parseInt(row.querySelector('.point-order').value) || 999;
-        const floor = row.querySelector('.point-floor-select').value, ptName = row.querySelector('.point-name-select').value;
+        const floor = row.querySelector('.point-floor-select').value;
+        const ptName = row.querySelector('.point-name-select').value;
         const interval = parseInt(row.querySelector('.point-interval').value) || 0;
         if (floor && ptName) pointsData.push({ order: order, name: `${floor} ${ptName}`, interval: interval });
     });
     
-    if (!name) { alert("請輸入子路線名稱！"); return; }
+    if (!currentName) { alert("請輸入子路線名稱！"); return; }
     if (pointsData.length === 0) { alert("至少需選擇一個巡邏點！"); return; }
     if (new Set(pointsData.map(p => p.order)).size !== pointsData.length) { alert("⚠️ 儲存失敗：發現相同的次序數字！"); return; }
+    
     pointsData.sort((a, b) => a.order - b.order);
     
-    // 🌟 將主路線與子路線獨立封裝，保證絕對不會影響到別的路線
+    // 獨立封裝 Payload，絕對只針對單一物件更新
     const payload = { 
-        mainRoute: mainRoute, 
-        name: name, 
+        mainRoute: currentMainRoute, 
+        name: currentName, 
         points: pointsData.map(p => p.name), 
         pointIntervals: pointsData.map(p => p.interval), 
         routeOrder: routeOrder, 
@@ -1590,13 +1618,14 @@ window.saveRoute = async function() {
     };
     
     try {
-        if (editIdx !== "") { 
-            await updateDoc(doc(db, "routes", editIdx), payload); 
+        if (targetRouteId !== "") { 
+            // 嚴格指定只更新該 ID
+            await updateDoc(doc(db, "routes", targetRouteId), payload); 
         } else { 
             await addDoc(collection(db, "routes"), payload); 
         }
         window.closeModal('routeModal'); 
-        alert("路線設定已儲存至雲端！");
+        alert("路線設定已獨立儲存成功！");
     } catch(e) { alert("儲存失敗"); }
 };
 
