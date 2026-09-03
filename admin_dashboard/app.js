@@ -1376,6 +1376,7 @@ window.exportRoutesBackup = function() {
 };
 
 window.handleImportRoutes = function(event) {
+window.handleImportRoutes = function(event) {
     const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = async function(e) {
@@ -1389,6 +1390,7 @@ window.handleImportRoutes = function(event) {
             }
             const addPromises = importedData.map(route => {
                 return addDoc(collection(db, "routes"), {
+                    mainRoute: route.mainRoute || '', // 🌟 支援匯入主路線設定
                     name: route.name, points: route.points, pointIntervals: route.pointIntervals || [],
                     routeOrder: route.routeOrder || 999, globalInterval: route.globalInterval || 0, isActive: route.isActive !== false
                 });
@@ -1401,12 +1403,15 @@ window.handleImportRoutes = function(event) {
     reader.readAsText(file);
 };
 
+// 🌟 改良：將表格改為「依主路線分組」的視覺化結構
 window.loadRoutesData = function() {
     const tbody = document.getElementById('routesTableBody'); if (!tbody) return; tbody.innerHTML = '';
     let keyword = document.getElementById('routeFilterKeyword') ? document.getElementById('routeFilterKeyword').value.toLowerCase().trim() : "";
     let routes = [...dbRoutes];
 
-    if (keyword) routes = routes.filter(r => r.name && r.name.toLowerCase().includes(keyword));
+    if (keyword) routes = routes.filter(r => (r.name && r.name.toLowerCase().includes(keyword)) || (r.mainRoute && r.mainRoute.toLowerCase().includes(keyword)));
+    
+    // 內部子路線排序規則
     routes.sort((a, b) => {
         if (window.routeSortState.col === 'order') {
             let valA = a.routeOrder || 999; let valB = b.routeOrder || 999;
@@ -1423,42 +1428,80 @@ window.loadRoutesData = function() {
 
     if (!routes || routes.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">目前尚無符合的路線資料。</td></tr>'; return; }
     
-    routes.forEach((route) => {
-        const globalInt = route.globalInterval || 0;
-        const safePoints = route.points || []; 
-        const formattedPoints = safePoints.map((pt, i) => {
-            let interval = (route.pointIntervals && route.pointIntervals[i]) ? route.pointIntervals[i] : 0;
-            let effectiveInterval = interval > 0 ? interval : globalInt;
-            let intervalTag = effectiveInterval > 0 ? ` <span style="color:var(--danger); font-size:11px;">(${effectiveInterval}分)</span>` : '';
-            return `<span style="display:inline-block; margin-bottom:4px;"><b>${i + 1}.</b> ${window.escapeHTML(pt)}${intervalTag}</span>`;
-        }).join(' ➔ ');
-        
-        const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
-        
-        tbody.innerHTML += `<tr>
-            <td><b style="font-size:16px;">${route.routeOrder || '-'}</b></td>
-            <td><strong>${window.escapeHTML(route.name || '未命名路線')}</strong></td>
-            <td>${statusBadge}</td>
-            <td>${safePoints.length} 點</td>
-            <td style="font-size:13px; color:#555;">${formattedPoints || '<span style="color:#aaa;">無點位</span>'}</td>
-            <td>
-                <button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editRoute('${route.id}')">✏️ 編輯</button>
-                <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteRoute('${route.id}')">🗑️ 刪除</button>
-            </td>
-        </tr>`;
+    // 🌟 核心分組邏輯
+    let groupedRoutes = {};
+    routes.forEach(r => {
+        let key = r.mainRoute ? r.mainRoute.trim() : '📌 獨立路線 (未分類)';
+        if (!groupedRoutes[key]) groupedRoutes[key] = [];
+        groupedRoutes[key].push(r);
+    });
+
+    // 讓「獨立路線」永遠排在最後面，其他主路線依字母排序
+    let groupKeys = Object.keys(groupedRoutes).sort((a, b) => {
+        if (a === '📌 獨立路線 (未分類)') return 1;
+        if (b === '📌 獨立路線 (未分類)') return -1;
+        return a.localeCompare(b);
+    });
+
+    groupKeys.forEach(groupName => {
+        // 畫出主路線標題列
+        tbody.innerHTML += `
+            <tr style="background-color: #e8f0fe;">
+                <td colspan="6" style="padding: 10px 15px; border-left: 4px solid var(--primary);">
+                    <strong style="color: var(--primary); font-size: 15px;">📂 ${window.escapeHTML(groupName)}</strong>
+                </td>
+            </tr>
+        `;
+
+        // 畫出該主路線底下的子路線
+        groupedRoutes[groupName].forEach((route) => {
+            const globalInt = route.globalInterval || 0;
+            const safePoints = route.points || []; 
+            const formattedPoints = safePoints.map((pt, i) => {
+                let interval = (route.pointIntervals && route.pointIntervals[i]) ? route.pointIntervals[i] : 0;
+                let effectiveInterval = interval > 0 ? interval : globalInt;
+                let intervalTag = effectiveInterval > 0 ? ` <span style="color:var(--danger); font-size:11px;">(${effectiveInterval}分)</span>` : '';
+                return `<span style="display:inline-block; margin-bottom:4px;"><b>${i + 1}.</b> ${window.escapeHTML(pt)}${intervalTag}</span>`;
+            }).join(' ➔ ');
+            
+            const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
+            
+            tbody.innerHTML += `<tr>
+                <td style="padding-left: 30px;"><b style="font-size:14px; color:#666;">${route.routeOrder || '-'}</b></td>
+                <td><strong>${window.escapeHTML(route.name || '未命名路線')}</strong></td>
+                <td>${statusBadge}</td>
+                <td>${safePoints.length} 點</td>
+                <td style="font-size:13px; color:#555;">${formattedPoints || '<span style="color:#aaa;">無點位</span>'}</td>
+                <td>
+                    <button class="btn btn-warning" style="padding: 4px 8px; font-size:12px;" onclick="window.editRoute('${route.id}')">✏️ 編輯</button>
+                    <button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="window.deleteRoute('${route.id}')">🗑️ 刪除</button>
+                </td>
+            </tr>`;
+        });
     });
 };
 
 window.openRouteModal = function(routeId = null) {
     const container = document.getElementById('pointsInputContainer'); container.innerHTML = '';
+    
+    // 🌟 更新主路線的 Datalist (記憶功能)
+    const dataList = document.getElementById('mainRouteDatalist');
+    if (dataList) {
+        dataList.innerHTML = '';
+        const uniqueMains = [...new Set(dbRoutes.map(r => r.mainRoute).filter(Boolean))];
+        uniqueMains.forEach(m => dataList.innerHTML += `<option value="${m}"></option>`);
+    }
+
     if (routeId) {
         const route = dbRoutes.find(r => r.id === routeId);
         document.getElementById('routeModalTitle').innerText = "編輯巡邏路線"; document.getElementById('editRouteId').value = routeId;
+        document.getElementById('routeModalMainRoute').value = route.mainRoute || ''; // 🌟 讀取主路線
         document.getElementById('routeModalName').value = route.name; document.getElementById('routeModalOrder').value = route.routeOrder || 1;
         document.getElementById('routeModalGlobalInterval').value = route.globalInterval || 0; document.getElementById('routeModalActive').checked = route.isActive !== false;
         route.points.forEach((pt, idx) => { window.addPointInputRow(pt, idx + 1, (route.pointIntervals && route.pointIntervals[idx] !== undefined) ? route.pointIntervals[idx] : 0); });
     } else {
         document.getElementById('routeModalTitle').innerText = "新增巡邏路線"; document.getElementById('editRouteId').value = "";
+        document.getElementById('routeModalMainRoute').value = ''; // 🌟 清空主路線
         document.getElementById('routeModalName').value = ""; document.getElementById('routeModalOrder').value = dbRoutes.length + 1;
         document.getElementById('routeModalGlobalInterval').value = 0; document.getElementById('routeModalActive').checked = true;
         window.addPointInputRow('', 1, 0); window.addPointInputRow('', 2, 0);
@@ -1514,9 +1557,13 @@ window.reorderUI = function() {
 };
 
 window.saveRoute = async function() {
-    const name = document.getElementById('routeModalName').value.trim(), editIdx = document.getElementById('editRouteId').value;
-    const routeOrder = parseInt(document.getElementById('routeModalOrder').value) || 999, isActive = document.getElementById('routeModalActive').checked;
+    const mainRoute = document.getElementById('routeModalMainRoute').value.trim(); // 🌟 儲存主路線
+    const name = document.getElementById('routeModalName').value.trim();
+    const editIdx = document.getElementById('editRouteId').value;
+    const routeOrder = parseInt(document.getElementById('routeModalOrder').value) || 999;
+    const isActive = document.getElementById('routeModalActive').checked;
     const globalInterval = parseInt(document.getElementById('routeModalGlobalInterval').value) || 0;
+    
     let pointsData = [];
     document.querySelectorAll('.point-input-row').forEach(row => {
         const order = parseInt(row.querySelector('.point-order').value) || 999;
@@ -1524,11 +1571,22 @@ window.saveRoute = async function() {
         const interval = parseInt(row.querySelector('.point-interval').value) || 0;
         if (floor && ptName) pointsData.push({ order: order, name: `${floor} ${ptName}`, interval: interval });
     });
-    if (!name) { alert("請輸入路線名稱！"); return; }
+    
+    if (!name) { alert("請輸入子路線名稱！"); return; }
     if (pointsData.length === 0) { alert("至少需選擇一個巡邏點！"); return; }
     if (new Set(pointsData.map(p => p.order)).size !== pointsData.length) { alert("⚠️ 儲存失敗：發現相同的次序數字！"); return; }
     pointsData.sort((a, b) => a.order - b.order);
-    const payload = { name: name, points: pointsData.map(p => p.name), pointIntervals: pointsData.map(p => p.interval), routeOrder: routeOrder, globalInterval: globalInterval, isActive: isActive };
+    
+    const payload = { 
+        mainRoute: mainRoute, // 🌟 寫入 Firebase
+        name: name, 
+        points: pointsData.map(p => p.name), 
+        pointIntervals: pointsData.map(p => p.interval), 
+        routeOrder: routeOrder, 
+        globalInterval: globalInterval, 
+        isActive: isActive 
+    };
+    
     try {
         if (editIdx !== "") { await updateDoc(doc(db, "routes", editIdx), payload); } else { await addDoc(collection(db, "routes"), payload); }
         window.closeModal('routeModal'); alert("路線設定已儲存至雲端！");
