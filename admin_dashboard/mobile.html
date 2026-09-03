@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="shared.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大樓巡邏系統 - 手機助理端</title>
+</head>
+<body onclick="window.closeProfileMenu(event)">
+
+    <!-- 手機版精簡頂部列 -->
+    <div class="topbar" style="padding: 15px; display: flex; justify-content: space-between; align-items: center; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h2 id="topbarTitle" style="margin: 0; font-size: 18px;">載入中...</h2>
+        <div style="position: relative;">
+            <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)" style="font-size: 13px; padding: 6px 10px;"></div>
+            <div id="profileMenu" class="profile-dropdown-content" style="right: 0; left: auto;">
+                <button class="btn btn-info" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openIssuedWorkOrdersModal()">📤 已發工單</button>
+                <button class="btn btn-warning" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
+                <button class="btn btn-danger" style="width: 100%; margin: 0; font-size: 14px;" onclick="window.performLogout()">🚪 登出系統</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 手機版底部導覽列 -->
+    <div class="mobile-bottom-nav" style="display: flex;">
+        <div class="nav-item" onclick="window.openManualIssueModal()">📝<br>發單</div>
+        <div class="nav-item active" onclick="window.switchAdminView('view-mobile-home', this)">🏠<br>各部連結</div>
+        <div class="nav-item" onclick="window.switchAdminView('view-notices', this)">📢<br>特別事項</div>
+        <div class="nav-item" onclick="window.switchAdminView('view-assistant', this)">
+            🔔<br>助理需求
+            <span id="assistantBadge" class="nav-badge" style="display:none;">0</span>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainContentContainer" style="display: none; height: calc(100vh - 60px); overflow-y: auto;">
+        <div class="content-body" style="padding: 10px; padding-bottom: 80px;">
+            
+            <!-- 手機版專屬：主頁 (各部門跳轉) -->
+            <div id="view-mobile-home" class="view-section active">
+                <div class="card" style="text-align: center;">
+                    <h3 style="margin-top:0; color: var(--primary);">跳轉至各部門系統</h3>
+                    <button class="btn btn-primary" style="padding: 15px; font-size: 16px; margin-bottom: 15px;" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</button>
+                    <button class="btn btn-info" style="padding: 15px; font-size: 16px; margin-bottom: 15px;" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</button>
+                    <button class="btn btn-warning" style="padding: 15px; font-size: 16px; margin-bottom: 0;" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</button>
+                </div>
+            </div>
+            
+            <!-- 視圖：特別事項通知 -->
+            <div id="view-notices" class="view-section">
+                <div class="card">
+                    <div class="card-header">📢 特別通知</div>
+                    <table>
+                        <tbody id="noticesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 視圖：物業助理需求通知 -->
+            <div id="view-assistant" class="view-section">
+                <div class="card">
+                    <div class="card-header">🔔 助理需求通知</div>
+                    <table>
+                        <tbody id="assistantRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> 
+    </div> 
+
+    <!-- 手機端會用到的 Modal (省略了電腦版專屬的路線與報表 Modal) -->
+    
+    <!-- 新增與編輯特別事項通知 -->
+    <div id="noticeModal" class="modal">
+        <div class="modal-content" style="width:95%;">
+            <h3 id="noticeModalTitle" style="color:var(--primary); margin-top:0;">📢 發佈通知</h3>
+            <input type="hidden" id="editNoticeId">
+            <div class="form-group"><label>通知內容</label><textarea id="noticeTextInput" class="form-control" rows="3"></textarea></div>
+            <div class="form-group"><label>生效日期</label><input type="date" id="noticeStartDate" class="form-control"></div>
+            <div class="form-group"><label>結束日期</label><input type="date" id="noticeEndDate" class="form-control"></div>
+            <div class="form-group" style="display:none;"> <!-- 手機端預設全選，不顯示繁雜選項以節省版面 -->
+                <input type="checkbox" class="notice-dept-chk" value="工程部" checked><input type="checkbox" class="notice-dept-chk" value="清潔部" checked>
+                <input type="checkbox" class="notice-dept-chk" value="管理部" checked><input type="checkbox" class="notice-dept-chk" value="物業助理" checked>
+                <input type="checkbox" class="notice-dept-chk" value="全體" checked>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.saveNotice()">發布</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="window.closeModal('noticeModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 手動發單彈窗 -->
+    <div id="manualIssueModal" class="modal">
+        <div class="modal-content" style="width:95%;">
+            <h3 style="color: var(--primary); margin-top:0;">📝 新增派發工單</h3>
+            <div class="form-group">
+                <label>目標部門</label>
+                <select id="manualIssueDept" class="form-control">
+                    <option value="管理部">💼 管理部 (助理需求)</option>
+                    <option value="工程部">🔧 工程部</option>
+                    <option value="清潔部">🧹 清潔部</option>
+                </select>
+            </div>
+            <div class="form-group"><label>地點</label><input type="text" id="manualIssueLocation" class="form-control" placeholder="請輸入發生地點"></div>
+            <div class="form-group">
+                <label>📸 拍攝或上傳相片 (可選)</label>
+                <input type="file" id="manualIssuePhoto" accept="image/*" capture="environment" class="form-control" onchange="window.handleManualPhoto(event)">
+                <img id="manualIssuePreview" style="display:none; width:100%; max-height:150px; object-fit:contain; margin-top:10px; border-radius:6px; border:1px solid #ccc;">
+            </div>
+            <div class="form-group"><label>📝 需求 / 異常內容說明</label><textarea id="manualIssueText" class="form-control" rows="3"></textarea></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.submitManualIssue()">送出</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('manualIssueModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 結案備註選擇彈窗 -->
+    <div id="completeActionModal" class="modal">
+        <div class="modal-content" style="width:95%; text-align:center;">
+            <h3 style="color: var(--success); margin-top:0;">✅ 完成需求</h3>
+            <p style="color:#666; font-size:14px;">此單號已處理完畢，您要加入結案備註嗎？</p>
+            <input type="hidden" id="completingOrderId">
+            <textarea id="completionRemarkInput" class="form-control" rows="3" placeholder="(選填) 請輸入結案備註..." style="margin-bottom:15px;"></textarea>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-success" style="padding:12px; font-size:15px;" onclick="window.executeCompleteRequest(true)">📝 加上備註並完成</button>
+                <button class="btn btn-primary" style="padding:12px; font-size:15px;" onclick="window.executeCompleteRequest(false)">⚡ 直接完成 (不加備註)</button>
+                <button class="btn btn-secondary" style="padding:12px; font-size:15px;" onclick="window.closeModal('completeActionModal')">❌ 取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="selfPasswordModal" class="modal">
+        <div class="modal-content" style="width:95%;">
+            <h3 style="margin-top:0;">更改個人密碼</h3>
+            <div class="form-group"><label>目前的舊密碼</label><input type="password" id="selfOldPassword" class="form-control"></div>
+            <div class="form-group"><label>設定新密碼</label><input type="password" id="selfNewPassword" class="form-control"></div>
+            <div class="form-group"><label>再次確認新密碼</label><input type="password" id="selfConfirmPassword" class="form-control"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" style="flex: 1;" onclick="window.saveSelfPassword()">確認</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="window.closeModal('selfPasswordModal')">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 已發工單追蹤 Modal -->
+    <div id="issuedWorkOrdersModal" class="modal">
+        <div class="modal-content" style="width: 95%;">
+            <h3 style="color: var(--info); margin-top:0;">📤 已發工單追蹤</h3>
+            <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                    <tbody id="issuedWorkOrdersTableBody">
+                        <tr><td style="text-align:center; color:#999; padding:20px;">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="window.closeModal('issuedWorkOrdersModal')">關閉</button>
+        </div>
+    </div>
+    
+    <!-- 照片放大預覽 Modal -->
+    <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
+        <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
+        <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面關閉</p>
+    </div>
+    
+    <!-- 引入拆分出來的共用 JavaScript -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
