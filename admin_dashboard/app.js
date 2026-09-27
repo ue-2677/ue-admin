@@ -1310,26 +1310,109 @@ window.loadPointsData = function() {
 // ==========================================
 // 點位新增模式切換與快捷輸入
 // ==========================================
+// ==========================================
+// 點位新增模式切換與快捷輸入 (具備自癒動態注入機制)
+// ==========================================
 window.currentPointMode = 'single'; // 'single' 或 'batch'
+
+// 🌟 自動檢測並補齊批量 HTML 結構，不再受限於 admin.html 是否有手動改好
+window.ensurePointModalBatchUI = function() {
+    const modalContent = document.querySelector('#pointModal .modal-content');
+    if (!modalContent) return;
+
+    // 若已經建立過結構，直接返回
+    if (document.getElementById('pointAddModeTabs')) return;
+
+    const titleEl = document.getElementById('pointModalTitle');
+    const nameInput = document.getElementById('pointModalName');
+    const uidInput = document.getElementById('pointModalUid');
+
+    if (!nameInput) return;
+
+    // 1. 動態插入「單筆 / 批量」切換按鈕
+    const tabsDiv = document.createElement('div');
+    tabsDiv.id = 'pointAddModeTabs';
+    tabsDiv.style.cssText = 'display: flex; gap: 8px; margin-bottom: 15px;';
+    tabsDiv.innerHTML = `
+        <button type="button" id="btnPointSingleMode" class="btn btn-primary" style="flex: 1; padding: 8px;" onclick="window.setPointAddMode('single')">單筆新增</button>
+        <button type="button" id="btnPointBatchMode" class="btn btn-secondary" style="flex: 1; padding: 8px;" onclick="window.setPointAddMode('batch')">📦 批量快速新增</button>
+    `;
+    if (titleEl && titleEl.nextSibling) {
+        titleEl.parentNode.insertBefore(tabsDiv, titleEl.nextSibling);
+    }
+
+    // 2. 將原本的單筆輸入欄位包進 pointSingleSection
+    const nameGroup = nameInput.closest('.form-group');
+    const uidGroup = uidInput ? uidInput.closest('.form-group') : null;
+
+    const singleSection = document.createElement('div');
+    singleSection.id = 'pointSingleSection';
+    if (nameGroup && nameGroup.parentNode) {
+        nameGroup.parentNode.insertBefore(singleSection, nameGroup);
+        singleSection.appendChild(nameGroup);
+        if (uidGroup) singleSection.appendChild(uidGroup);
+    }
+
+    // 3. 動態插入 pointBatchSection（批量多行輸入與快捷按鈕）
+    const batchSection = document.createElement('div');
+    batchSection.id = 'pointBatchSection';
+    batchSection.style.display = 'none';
+    batchSection.innerHTML = `
+        <div class="form-group">
+            <label style="font-weight: bold; font-size: 13px;">點擊直接加入常用點位：</label>
+            <div style="margin-bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
+                <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('客梯大堂')">+ 客梯大堂</span>
+                <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('逃生安全梯')">+ 逃生安全梯</span>
+                <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('消防栓箱')">+ 消防栓箱</span>
+                <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('電錶配電室')">+ 電錶配電室</span>
+                <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('貨梯廳')">+ 貨梯廳</span>
+                <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('防煙門')">+ 防煙門</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <label style="margin: 0; font-weight: bold; font-size: 13px;">巡邏點清單 (一行一個點位)：</label>
+                <button type="button" class="btn btn-warning" style="padding: 3px 8px; font-size: 11px; margin: 0;" onclick="window.loadStandardBatchTemplate()">⚡ 一鍵帶入標準四點</button>
+            </div>
+            <textarea id="pointModalBatchNames" class="form-control" rows="5" placeholder="例如：&#10;客梯大堂&#10;逃生安全梯&#10;消防栓箱&#10;電錶配電室" style="font-family: monospace; line-height: 1.5;"></textarea>
+            <span style="font-size: 12px; color: #666; display: block; margin-top: 5px;">
+                💡 每一行代表一個點位。可手動編輯或貼上，儲存時會一次寫入雲端。
+            </span>
+        </div>
+    `;
+
+    if (singleSection.nextSibling) {
+        singleSection.parentNode.insertBefore(batchSection, singleSection.nextSibling);
+    } else {
+        singleSection.parentNode.appendChild(batchSection);
+    }
+};
 
 window.setPointAddMode = function(mode) {
     window.currentPointMode = mode;
+    window.ensurePointModalBatchUI();
+
     const btnSingle = document.getElementById('btnPointSingleMode');
     const btnBatch = document.getElementById('btnPointBatchMode');
     const secSingle = document.getElementById('pointSingleSection');
     const secBatch = document.getElementById('pointBatchSection');
 
     if (mode === 'batch') {
-        if (btnSingle) { btnSingle.className = 'btn btn-secondary'; }
-        if (btnBatch) { btnBatch.className = 'btn btn-primary'; }
+        if (btnSingle) btnSingle.className = 'btn btn-secondary';
+        if (btnBatch) btnBatch.className = 'btn btn-primary';
         if (secSingle) secSingle.style.display = 'none';
         if (secBatch) secBatch.style.display = 'block';
     } else {
-        if (btnSingle) { btnSingle.className = 'btn btn-primary'; }
-        if (btnBatch) { btnBatch.className = 'btn btn-secondary'; }
+        if (btnSingle) btnSingle.className = 'btn btn-primary';
+        if (btnBatch) btnBatch.className = 'btn btn-secondary';
         if (secSingle) secSingle.style.display = 'block';
         if (secBatch) secBatch.style.display = 'none';
     }
+};
+
+window.loadStandardBatchTemplate = function() {
+    const textarea = document.getElementById('pointModalBatchNames');
+    if (!textarea) return;
+    textarea.value = "客梯大堂\n逃生安全梯\n消防栓箱\n電錶配電室";
 };
 
 window.appendBatchPoint = function(pointName) {
@@ -1345,6 +1428,8 @@ window.appendBatchPoint = function(pointName) {
 };
 
 window.openPointModal = function(ptId = null) {
+    window.ensurePointModalBatchUI();
+
     const uniqueFloors = window.sortFloorsArray([...new Set(dbPoints.map(p => p.floor).filter(Boolean))]);
     const dataList = document.getElementById('floorDatalist');
     const kwContainer = document.getElementById('quickFloorKeywords');
@@ -1376,18 +1461,18 @@ window.openPointModal = function(ptId = null) {
         document.getElementById('pointModalTitle').innerText = "編輯巡邏點位";
         document.getElementById('editPointId').value = ptId;
         document.getElementById('pointModalFloor').value = pt.floor;
-        document.getElementById('pointModalName').value = pt.name;
-        document.getElementById('pointModalUid').value = boundUids.length > 0 ? boundUids[0] : "";
+        if (document.getElementById('pointModalName')) document.getElementById('pointModalName').value = pt.name;
+        if (document.getElementById('pointModalUid')) document.getElementById('pointModalUid').value = boundUids.length > 0 ? boundUids[0] : "";
     } else {
-        // 新增模式：顯示切換按鈕，清空欄位
+        // 新增模式：顯示切換按鈕
         if (modeTabs) modeTabs.style.display = 'flex';
-        window.setPointAddMode('single'); // 預設單筆，可點擊切換為批量
+        window.setPointAddMode('single');
 
         document.getElementById('pointModalTitle').innerText = "新增巡邏點位";
         document.getElementById('editPointId').value = "";
         document.getElementById('pointModalFloor').value = "";
-        document.getElementById('pointModalName').value = "";
-        document.getElementById('pointModalUid').value = "";
+        if (document.getElementById('pointModalName')) document.getElementById('pointModalName').value = "";
+        if (document.getElementById('pointModalUid')) document.getElementById('pointModalUid').value = "";
         if (document.getElementById('pointModalBatchNames')) {
             document.getElementById('pointModalBatchNames').value = "";
         }
@@ -1411,7 +1496,8 @@ window.savePoint = async function() {
 
     // 🌟 處理「批量新增模式」
     if (!editIdx && window.currentPointMode === 'batch') {
-        const batchText = document.getElementById('pointModalBatchNames').value;
+        const batchEl = document.getElementById('pointModalBatchNames');
+        const batchText = batchEl ? batchEl.value : '';
         const names = batchText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
         
         if (names.length === 0) {
@@ -1419,11 +1505,9 @@ window.savePoint = async function() {
             return;
         }
 
-        // 去除重複名稱
         const uniqueNames = [...new Set(names)];
         
         try {
-            // 並行批量儲存至 Firestore
             const promises = uniqueNames.map(name => addDoc(collection(db, "points"), { floor, name }));
             await Promise.all(promises);
             
@@ -1436,9 +1520,11 @@ window.savePoint = async function() {
         return;
     }
 
-    // 🌟 處理原本的「單筆新增 / 編輯模式」
-    const name = document.getElementById('pointModalName').value.trim();
-    const inputUid = document.getElementById('pointModalUid').value.trim();
+    // 🌟 處理「單筆新增 / 編輯模式」
+    const nameEl = document.getElementById('pointModalName');
+    const uidEl = document.getElementById('pointModalUid');
+    const name = nameEl ? nameEl.value.trim() : '';
+    const inputUid = uidEl ? uidEl.value.trim() : '';
     if (!name) { alert("請輸入位置名稱！"); return; }
     const newFullName = `${floor} ${name}`;
 
