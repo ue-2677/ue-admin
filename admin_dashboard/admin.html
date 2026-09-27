@@ -401,15 +401,16 @@
     </div>
 
     <!-- 巡邏點位彈窗 (支援單筆與批量新增) -->
+   <!-- 巡邏點位彈窗 (支援單筆與批量新增) -->
     <div id="pointModal" class="modal">
         <div class="modal-content" style="width: 520px;">
             <h3 id="pointModalTitle">新增巡邏點位</h3>
             <input type="hidden" id="editPointId">
 
-            <!-- 🌟 模式切換按鈕 (編輯舊點位時自動隱藏) -->
+            <!-- 模式切換按鈕 -->
             <div id="pointAddModeTabs" style="display: flex; gap: 8px; margin-bottom: 15px;">
-                <button type="button" id="btnPointSingleMode" class="btn btn-primary" style="flex: 1; padding: 7px;" onclick="window.setPointAddMode('single')">單筆新增</button>
-                <button type="button" id="btnPointBatchMode" class="btn btn-secondary" style="flex: 1; padding: 7px;" onclick="window.setPointAddMode('batch')">📦 批量快速新增</button>
+                <button type="button" id="btnPointSingleMode" class="btn btn-primary" style="flex: 1; padding: 8px;" onclick="window.setPointAddMode('single')">單筆新增</button>
+                <button type="button" id="btnPointBatchMode" class="btn btn-secondary" style="flex: 1; padding: 8px;" onclick="window.setPointAddMode('batch')">📦 批量快速新增</button>
             </div>
 
             <!-- 共用：樓層輸入與快捷鍵 -->
@@ -432,24 +433,26 @@
                 </div>
             </div>
 
-            <!-- 2. 批量新增模式欄位 -->
+            <!-- 2. 批量新增模式欄位 (切換到批量時會顯示此處) -->
             <div id="pointBatchSection" style="display: none;">
                 <div class="form-group">
-                    <label>常見點位快捷鍵 (點擊直接加入)：</label>
+                    <label>快捷加入常用點位：</label>
                     <div style="margin-bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
                         <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('客梯大堂')">+ 客梯大堂</span>
                         <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('逃生安全梯')">+ 逃生安全梯</span>
                         <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('消防栓箱')">+ 消防栓箱</span>
                         <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('電錶配電室')">+ 電錶配電室</span>
                         <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('貨梯廳')">+ 貨梯廳</span>
-                        <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('茶水間')">+ 茶水間</span>
                         <span class="badge badge-info" style="cursor:pointer; user-select:none; font-size:12px; padding:6px 10px;" onclick="window.appendBatchPoint('防煙門')">+ 防煙門</span>
                     </div>
 
-                    <label>巡邏點位置名稱清單 (一行一個點位)：</label>
-                    <textarea id="pointModalBatchNames" class="form-control" rows="5" placeholder="例如：&#10;客梯大堂&#10;東側逃生梯&#10;西側逃生梯&#10;電錶配電室" style="font-family: monospace; line-height: 1.5;"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <label style="margin: 0;">巡邏點清單 (一行一個點位)：</label>
+                        <button type="button" class="btn btn-warning" style="padding: 3px 8px; font-size: 11px;" onclick="window.loadStandardBatchTemplate()">⚡ 一鍵帶入標準四點</button>
+                    </div>
+                    <textarea id="pointModalBatchNames" class="form-control" rows="5" placeholder="例如：&#10;客梯大堂&#10;東側逃生梯&#10;西側逃生梯&#10;消防栓箱" style="font-family: monospace; line-height: 1.5;"></textarea>
                     <span style="font-size: 12px; color: #666; display: block; margin-top: 5px;">
-                        💡 每一行代表一個點位。建立完成後，巡邏員於手機巡邏時直接感應 NFC 晶片即可完成 UID 綁定。
+                        💡 每一行代表一個點位。可手動編輯或貼上，儲存時會一次寫入資料庫。
                     </span>
                 </div>
             </div>
