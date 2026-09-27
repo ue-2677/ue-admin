@@ -1307,30 +1307,90 @@ window.loadPointsData = function() {
     });
 };
 
+// ==========================================
+// 點位新增模式切換與快捷輸入
+// ==========================================
+window.currentPointMode = 'single'; // 'single' 或 'batch'
+
+window.setPointAddMode = function(mode) {
+    window.currentPointMode = mode;
+    const btnSingle = document.getElementById('btnPointSingleMode');
+    const btnBatch = document.getElementById('btnPointBatchMode');
+    const secSingle = document.getElementById('pointSingleSection');
+    const secBatch = document.getElementById('pointBatchSection');
+
+    if (mode === 'batch') {
+        if (btnSingle) { btnSingle.className = 'btn btn-secondary'; }
+        if (btnBatch) { btnBatch.className = 'btn btn-primary'; }
+        if (secSingle) secSingle.style.display = 'none';
+        if (secBatch) secBatch.style.display = 'block';
+    } else {
+        if (btnSingle) { btnSingle.className = 'btn btn-primary'; }
+        if (btnBatch) { btnBatch.className = 'btn btn-secondary'; }
+        if (secSingle) secSingle.style.display = 'block';
+        if (secBatch) secBatch.style.display = 'none';
+    }
+};
+
+window.appendBatchPoint = function(pointName) {
+    const textarea = document.getElementById('pointModalBatchNames');
+    if (!textarea) return;
+    const currentVal = textarea.value.trim();
+    if (currentVal.length > 0) {
+        textarea.value = currentVal + '\n' + pointName;
+    } else {
+        textarea.value = pointName;
+    }
+    textarea.focus();
+};
+
 window.openPointModal = function(ptId = null) {
-    // 🌟 套用智慧排序
     const uniqueFloors = window.sortFloorsArray([...new Set(dbPoints.map(p => p.floor).filter(Boolean))]);
     const dataList = document.getElementById('floorDatalist');
     const kwContainer = document.getElementById('quickFloorKeywords');
-    if(dataList) dataList.innerHTML = ''; 
-    if(kwContainer) kwContainer.innerHTML = '<span style="font-size:12px; color:#666;">快速加入：</span>';
+    if (dataList) dataList.innerHTML = ''; 
+    if (kwContainer) kwContainer.innerHTML = '<span style="font-size:12px; color:#666;">快速加入：</span>';
+    
     const commonKeywords = ['R/F', 'A棟', 'B棟', '1F', 'B1'];
-    commonKeywords.forEach(kw => { if(kwContainer) kwContainer.innerHTML += `<span class="badge badge-warning" style="cursor:pointer; user-select:none;" onclick="window.appendFloorText('${kw}')">+ ${kw}</span>`; });
+    commonKeywords.forEach(kw => {
+        if (kwContainer) kwContainer.innerHTML += `<span class="badge badge-warning" style="cursor:pointer; user-select:none;" onclick="window.appendFloorText('${kw}')">+ ${kw}</span>`;
+    });
+    
     uniqueFloors.forEach(f => {
-        if(dataList) dataList.innerHTML += `<option value="${f}"></option>`;
-        if (!commonKeywords.includes(f) && kwContainer) { kwContainer.innerHTML += `<span class="badge badge-info" style="cursor:pointer; user-select:none;" onclick="window.setFloorText('${f}')">${f}</span>`; }
+        if (dataList) dataList.innerHTML += `<option value="${f}"></option>`;
+        if (!commonKeywords.includes(f) && kwContainer) {
+            kwContainer.innerHTML += `<span class="badge badge-info" style="cursor:pointer; user-select:none;" onclick="window.setFloorText('${f}')">${f}</span>`;
+        }
     });
 
+    const modeTabs = document.getElementById('pointAddModeTabs');
+
     if (ptId !== null) {
+        // 編輯模式：隱藏批量切換，強制單筆
+        if (modeTabs) modeTabs.style.display = 'none';
+        window.setPointAddMode('single');
+
         const pt = dbPoints.find(p => p.id === ptId);
         const fullPtName = `${pt.floor} ${pt.name}`;
         const boundUids = Object.keys(dbUidMappings).filter(k => dbUidMappings[k] === fullPtName);
-        document.getElementById('pointModalTitle').innerText = "編輯巡邏點位"; document.getElementById('editPointId').value = ptId;
-        document.getElementById('pointModalFloor').value = pt.floor; document.getElementById('pointModalName').value = pt.name;
+        document.getElementById('pointModalTitle').innerText = "編輯巡邏點位";
+        document.getElementById('editPointId').value = ptId;
+        document.getElementById('pointModalFloor').value = pt.floor;
+        document.getElementById('pointModalName').value = pt.name;
         document.getElementById('pointModalUid').value = boundUids.length > 0 ? boundUids[0] : "";
     } else {
-        document.getElementById('pointModalTitle').innerText = "新增巡邏點位"; document.getElementById('editPointId').value = "";
-        document.getElementById('pointModalFloor').value = ""; document.getElementById('pointModalName').value = ""; document.getElementById('pointModalUid').value = "";
+        // 新增模式：顯示切換按鈕，清空欄位
+        if (modeTabs) modeTabs.style.display = 'flex';
+        window.setPointAddMode('single'); // 預設單筆，可點擊切換為批量
+
+        document.getElementById('pointModalTitle').innerText = "新增巡邏點位";
+        document.getElementById('editPointId').value = "";
+        document.getElementById('pointModalFloor').value = "";
+        document.getElementById('pointModalName').value = "";
+        document.getElementById('pointModalUid').value = "";
+        if (document.getElementById('pointModalBatchNames')) {
+            document.getElementById('pointModalBatchNames').value = "";
+        }
     }
     document.getElementById('pointModal').classList.add('active');
 };
@@ -1344,10 +1404,44 @@ window.setFloorText = function(text) {
 };
 
 window.savePoint = async function() {
-    const floor = document.getElementById('pointModalFloor').value.trim(), name = document.getElementById('pointModalName').value.trim();
-    const inputUid = document.getElementById('pointModalUid').value.trim(), editIdx = document.getElementById('editPointId').value;
-    if (!floor || !name) { alert("樓層與位置名為必填！"); return; }
+    const floor = document.getElementById('pointModalFloor').value.trim();
+    const editIdx = document.getElementById('editPointId').value;
+    
+    if (!floor) { alert("請先填寫或點選樓層 / 區域！"); return; }
+
+    // 🌟 處理「批量新增模式」
+    if (!editIdx && window.currentPointMode === 'batch') {
+        const batchText = document.getElementById('pointModalBatchNames').value;
+        const names = batchText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+        
+        if (names.length === 0) {
+            alert("請至少輸入或點選一個巡邏點位置名稱！");
+            return;
+        }
+
+        // 去除重複名稱
+        const uniqueNames = [...new Set(names)];
+        
+        try {
+            // 並行批量儲存至 Firestore
+            const promises = uniqueNames.map(name => addDoc(collection(db, "points"), { floor, name }));
+            await Promise.all(promises);
+            
+            alert(`✅ 成功為【${floor}】批量建立了 ${uniqueNames.length} 個巡邏點！`);
+            window.closeModal('pointModal');
+        } catch(e) {
+            console.error("批量建立失敗:", e);
+            alert("批量儲存失敗，請檢查網路連線。");
+        }
+        return;
+    }
+
+    // 🌟 處理原本的「單筆新增 / 編輯模式」
+    const name = document.getElementById('pointModalName').value.trim();
+    const inputUid = document.getElementById('pointModalUid').value.trim();
+    if (!name) { alert("請輸入位置名稱！"); return; }
     const newFullName = `${floor} ${name}`;
+
     try {
         if (editIdx !== "") {
             const pt = dbPoints.find(p => p.id === editIdx);
@@ -1355,7 +1449,11 @@ window.savePoint = async function() {
             await updateDoc(doc(db, "points", editIdx), { floor, name });
             const updatePromises = [];
             if (oldFullName !== newFullName) {
-                for (let k in dbUidMappings) { if (dbUidMappings[k] === oldFullName) updatePromises.push(setDoc(doc(db, "uidMappings", k), { locationName: newFullName })); }
+                for (let k in dbUidMappings) {
+                    if (dbUidMappings[k] === oldFullName) {
+                        updatePromises.push(setDoc(doc(db, "uidMappings", k), { locationName: newFullName }));
+                    }
+                }
                 for (let r of dbRoutes) {
                     if (r.points.includes(oldFullName)) {
                         const newPoints = r.points.map(p => p === oldFullName ? newFullName : p);
@@ -1364,13 +1462,24 @@ window.savePoint = async function() {
                 }
             }
             await Promise.all(updatePromises);
-        } else { await addDoc(collection(db, "points"), { floor, name }); }
+        } else {
+            await addDoc(collection(db, "points"), { floor, name });
+        }
+
         const mapPromises = [];
-        for (let k in dbUidMappings) { if (dbUidMappings[k] === newFullName) mapPromises.push(deleteDoc(doc(db, "uidMappings", k))); }
-        if (inputUid) mapPromises.push(setDoc(doc(db, "uidMappings", inputUid), { locationName: newFullName }));
+        for (let k in dbUidMappings) {
+            if (dbUidMappings[k] === newFullName) mapPromises.push(deleteDoc(doc(db, "uidMappings", k)));
+        }
+        if (inputUid) {
+            mapPromises.push(setDoc(doc(db, "uidMappings", inputUid), { locationName: newFullName }));
+        }
         await Promise.all(mapPromises);
         window.closeModal('pointModal');
-    } catch(e) { console.error("Error saving point", e); alert("儲存失敗！"); }
+        alert("✅ 點位儲存成功！");
+    } catch(e) {
+        console.error("Error saving point", e);
+        alert("儲存失敗！");
+    }
 };
 
 window.editPoint = function(id) { window.openPointModal(id); };
