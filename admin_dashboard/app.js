@@ -1777,67 +1777,72 @@ window.openRouteModal = function(routeId = null) {
 
 // 🌟 自動注入懸浮「＋」按鈕與插入動畫樣式 (免手動改 CSS 檔案，防快取)
 (function injectInsertPointStyles() {
-    if (document.getElementById('insertPointCustomStyle')) return;
+    // 若已有舊樣式則移除重建
+    const oldStyle = document.getElementById('insertPointCustomStyle');
+    if (oldStyle) oldStyle.remove();
+
     const style = document.createElement('style');
     style.id = 'insertPointCustomStyle';
     style.innerHTML = `
         .point-input-row {
             position: relative;
-            margin-bottom: 14px !important;
-            transition: background 0.3s ease;
+            margin-bottom: 12px !important;
+            transition: background 0.2s ease;
         }
-        /* 兩點間的隱形懸浮熱區 */
+        /* 🌟 核心修正 1：懸浮時層級置頂，確保兩點間的「＋」絕對不會被下一行點位擋住 */
+        .point-input-row:hover {
+            z-index: 100 !important;
+        }
+        /* 兩點間的懸浮觸發熱區 (高度加高至 24px，更容易碰觸) */
         .row-insert-trigger {
             position: absolute;
-            bottom: -12px;
+            bottom: -14px;
             left: 0;
             width: 100%;
-            height: 20px;
+            height: 24px;
             display: flex;
             align-items: center;
             opacity: 0;
             cursor: pointer;
-            z-index: 20;
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 101;
+            pointer-events: auto;
+            transition: opacity 0.2s ease;
         }
-        /* 滑鼠移入空白處時顯現 */
+        /* 🌟 核心修正 2：只要滑鼠游標停在該列或兩列之間，立刻顯現按鈕與引導線 */
+        .point-input-row:hover .row-insert-trigger,
         .row-insert-trigger:hover {
-            opacity: 1;
+            opacity: 1 !important;
         }
-        /* 左側微距線 */
-        .row-insert-line-left {
-            width: 18px;
-            height: 2px;
-            background: var(--primary, #1a73e8);
-        }
-        /* 圓形「＋」按鈕，精準對齊左側序號正下方 */
+        /* 圓形「＋」按鈕：精準置於左側序號正下方 */
         .row-insert-btn {
-            background: var(--primary, #1a73e8);
+            background: #1a73e8;
             color: white;
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 14px;
             font-weight: bold;
-            box-shadow: 0 2px 6px rgba(26, 115, 232, 0.4);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             user-select: none;
+            margin-left: 19px;
             transition: transform 0.15s ease, background 0.15s ease;
         }
         .row-insert-trigger:hover .row-insert-btn {
-            transform: scale(1.2);
-            background: #1557b0;
+            transform: scale(1.25);
+            background: #0d62d1;
         }
-        /* 右側水平延伸線 */
+        /* 右側水平延伸導引線 */
         .row-insert-line-right {
             flex: 1;
             height: 2px;
-            background: var(--primary, #1a73e8);
-            margin-left: 6px;
+            background: #1a73e8;
+            margin-left: 8px;
+            opacity: 0.6;
         }
-        /* 新插入點位的柔和高亮呼吸動畫 */
+        /* 新插入點位時的柔和淡藍呼吸動畫 */
         @keyframes highlightNewRow {
             0% { background-color: #d2e3fc; border-radius: 6px; }
             100% { background-color: transparent; }
@@ -1871,8 +1876,7 @@ window.createPointRowElement = function(fullPointName = '', orderNumber = null, 
         <button type="button" class="btn btn-danger" onclick="window.removePointRow(this)" style="padding: 10px;" title="刪除此點">❌</button>
         
         <!-- 🌟 兩點之間的「＋」懸浮插入觸發區 -->
-        <div class="row-insert-trigger" onclick="window.insertPointRowAfter(this.parentElement)" title="在此處插入新巡邏點">
-            <span class="row-insert-line-left"></span>
+        <div class="row-insert-trigger" onclick="event.stopPropagation(); window.insertPointRowAfter(this.parentElement)" title="在此處插入新巡邏點">
             <span class="row-insert-btn">＋</span>
             <span class="row-insert-line-right"></span>
         </div>
