@@ -1776,79 +1776,99 @@ window.openRouteModal = function(routeId = null) {
 // ==========================================
 
 // 🌟 自動注入懸浮「＋」按鈕與插入動畫樣式 (免手動改 CSS 檔案，防快取)
+// ==========================================
+// 路線點位輸入列管理 (支援兩點間懸浮「＋」快速插入)
+// ==========================================
+
+// 🌟 強制注入懸浮「＋」按鈕與樣式 (強制覆蓋舊樣式，徹底解決圖層遮擋問題)
 (function injectInsertPointStyles() {
-    // 若已有舊樣式則移除重建
-    const oldStyle = document.getElementById('insertPointCustomStyle');
-    if (oldStyle) oldStyle.remove();
+    // 先移除舊的 style 標籤，保證每次都能載入最新樣式
+    const existing = document.getElementById('insertPointCustomStyle');
+    if (existing) existing.remove();
 
     const style = document.createElement('style');
     style.id = 'insertPointCustomStyle';
     style.innerHTML = `
+        /* 每個點位列預設相對定位，加大下邊距以留出縫隙 */
         .point-input-row {
-            position: relative;
-            margin-bottom: 12px !important;
-            transition: background 0.2s ease;
+            position: relative !important;
+            margin-bottom: 18px !important;
         }
-        /* 🌟 核心修正 1：懸浮時層級置頂，確保兩點間的「＋」絕對不會被下一行點位擋住 */
+        /* 當滑鼠移入點位列時，該列圖層立刻置頂，避免被下一列遮蔽 */
         .point-input-row:hover {
             z-index: 100 !important;
         }
-        /* 兩點間的懸浮觸發熱區 (高度加高至 24px，更容易碰觸) */
+        
+        /* 兩點間的觸發導引熱區：高度加大至 28px，保證容易觸發 */
         .row-insert-trigger {
             position: absolute;
-            bottom: -14px;
+            bottom: -16px;
             left: 0;
             width: 100%;
-            height: 24px;
+            height: 28px;
             display: flex;
             align-items: center;
             opacity: 0;
+            visibility: hidden;
             cursor: pointer;
-            z-index: 101;
+            z-index: 999 !important;
             pointer-events: auto;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.15s ease, visibility 0.15s ease;
         }
-        /* 🌟 核心修正 2：只要滑鼠游標停在該列或兩列之間，立刻顯現按鈕與引導線 */
+        
+        /* 🌟 核心修正：滑鼠移入該列任一位置 或 移到縫隙時，按鈕必定立即浮現 */
         .point-input-row:hover .row-insert-trigger,
         .row-insert-trigger:hover {
             opacity: 1 !important;
+            visibility: visible !important;
         }
-        /* 圓形「＋」按鈕：精準置於左側序號正下方 */
+        
+        /* 左側藍色導引線 */
+        .row-insert-line-left {
+            width: 16px;
+            height: 2px;
+            background: #1a73e8;
+            opacity: 0.7;
+        }
+        
+        /* 圓形亮藍色「＋」按鈕：精準對齊序號正下方 */
         .row-insert-btn {
             background: #1a73e8;
-            color: white;
+            color: #ffffff;
             width: 22px;
             height: 22px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            line-height: 1;
+            box-shadow: 0 2px 6px rgba(26, 115, 232, 0.5);
             user-select: none;
-            margin-left: 19px;
+            margin: 0 4px;
             transition: transform 0.15s ease, background 0.15s ease;
         }
         .row-insert-trigger:hover .row-insert-btn {
-            transform: scale(1.25);
+            transform: scale(1.3);
             background: #0d62d1;
         }
-        /* 右側水平延伸導引線 */
+        
+        /* 右側延伸導引線 */
         .row-insert-line-right {
             flex: 1;
             height: 2px;
             background: #1a73e8;
-            margin-left: 8px;
-            opacity: 0.6;
+            opacity: 0.7;
         }
-        /* 新插入點位時的柔和淡藍呼吸動畫 */
+        
+        /* 剛插入的新點位會有淡藍呼吸動畫 */
         @keyframes highlightNewRow {
             0% { background-color: #d2e3fc; border-radius: 6px; }
             100% { background-color: transparent; }
         }
         .row-just-inserted {
-            animation: highlightNewRow 1.2s ease;
+            animation: highlightNewRow 1s ease;
         }
     `;
     document.head.appendChild(style);
@@ -1875,8 +1895,9 @@ window.createPointRowElement = function(fullPointName = '', orderNumber = null, 
         <input type="number" class="form-control point-interval" value="${maxInterval}" min="0" style="width: 85px;" placeholder="限時(分)" title="距離上個點的超時限制(分鐘)">
         <button type="button" class="btn btn-danger" onclick="window.removePointRow(this)" style="padding: 10px;" title="刪除此點">❌</button>
         
-        <!-- 🌟 兩點之間的「＋」懸浮插入觸發區 -->
+        <!-- 🌟 兩點之間的「＋」懸浮插入觸發區 (置於序號下方與整列縫隙) -->
         <div class="row-insert-trigger" onclick="event.stopPropagation(); window.insertPointRowAfter(this.parentElement)" title="在此處插入新巡邏點">
+            <span class="row-insert-line-left"></span>
             <span class="row-insert-btn">＋</span>
             <span class="row-insert-line-right"></span>
         </div>
