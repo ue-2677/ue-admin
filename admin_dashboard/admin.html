@@ -465,11 +465,22 @@
     </div>
 
     <div id="routeModal" class="modal">
-    <div class="modal-content" style="width:750px;">
-        
-            <!-- 置頂吸附標題列：滾動時始終停留在上方 -->
-            <div style="display: flex; justify-content: space-between; align-items: center; position: sticky; top: -25px; background: white; padding-top: 15px; padding-bottom: 12px; margin-top: -15px; z-index: 10; border-bottom: 1px solid #eee; margin-bottom: 15px;">
-                <h3 id="routeModalTitle" style="margin: 0;">新增巡邏路線</h3>
+        <!-- 🌟 外層定位容器：避免被內部捲軸裁切 -->
+        <div style="position: relative; max-width: 95%;">
+            
+            <!-- 🌟 框外右上角懸浮的專屬紅色關閉按鈕 -->
+            <div onclick="window.closeModal('routeModal')" 
+                 style="position: absolute; top: -15px; right: -15px; width: 34px; height: 34px; background: #dc3545; color: #ffffff; border: 2px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.35); z-index: 2100; transition: transform 0.2s, background 0.2s;"
+                 onmouseover="this.style.transform='scale(1.15)'; this.style.background='#c82333';"
+                 onmouseout="this.style.transform='scale(1)'; this.style.background='#dc3545';"
+                 title="關閉視窗">✕</div>
+
+            <div class="modal-content" style="width:750px; max-width: 100%;">
+                <h3 id="routeModalTitle" style="margin-top: 0;">新增巡邏路線</h3>
+                <input type="hidden" id="editRouteId">
+                
+                <!-- 🌟 補回：主路線與子路線的組合輸入框 -->
+                <div class="form-group" style="display: flex; gap: 15px;">
                 <span onclick="window.closeModal('routeModal')" 
                       style="font-size: 28px; font-weight: bold; color: var(--danger); cursor: pointer; line-height: 1; padding: 0 5px; user-select: none; transition: 0.2s;" 
                       onmouseover="this.style.transform='scale(1.2)'" 
