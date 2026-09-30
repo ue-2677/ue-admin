@@ -1771,12 +1771,86 @@ window.openRouteModal = function(routeId = null) {
     }
     document.getElementById('routeModal').classList.add('active');
 };
+// ==========================================
+// 路線點位輸入列管理 (支援兩點間懸浮「＋」快速插入)
+// ==========================================
 
-window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxInterval = 0) {
-    const container = document.getElementById('pointsInputContainer');
-    if (orderNumber === null) orderNumber = container.children.length + 1;
-    
-    // 🌟 套用智慧排序，讓點選路線點位時樓層井然有序
+// 🌟 自動注入懸浮「＋」按鈕與插入動畫樣式 (免手動改 CSS 檔案，防快取)
+(function injectInsertPointStyles() {
+    if (document.getElementById('insertPointCustomStyle')) return;
+    const style = document.createElement('style');
+    style.id = 'insertPointCustomStyle';
+    style.innerHTML = `
+        .point-input-row {
+            position: relative;
+            margin-bottom: 14px !important;
+            transition: background 0.3s ease;
+        }
+        /* 兩點間的隱形懸浮熱區 */
+        .row-insert-trigger {
+            position: absolute;
+            bottom: -12px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 20;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        /* 滑鼠移入空白處時顯現 */
+        .row-insert-trigger:hover {
+            opacity: 1;
+        }
+        /* 左側微距線 */
+        .row-insert-line-left {
+            width: 18px;
+            height: 2px;
+            background: var(--primary, #1a73e8);
+        }
+        /* 圓形「＋」按鈕，精準對齊左側序號正下方 */
+        .row-insert-btn {
+            background: var(--primary, #1a73e8);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(26, 115, 232, 0.4);
+            user-select: none;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+        .row-insert-trigger:hover .row-insert-btn {
+            transform: scale(1.2);
+            background: #1557b0;
+        }
+        /* 右側水平延伸線 */
+        .row-insert-line-right {
+            flex: 1;
+            height: 2px;
+            background: var(--primary, #1a73e8);
+            margin-left: 6px;
+        }
+        /* 新插入點位的柔和高亮呼吸動畫 */
+        @keyframes highlightNewRow {
+            0% { background-color: #d2e3fc; border-radius: 6px; }
+            100% { background-color: transparent; }
+        }
+        .row-just-inserted {
+            animation: highlightNewRow 1.2s ease;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// 🌟 核心：建立單一巡邏點 DOM 物件
+window.createPointRowElement = function(fullPointName = '', orderNumber = null, maxInterval = 0) {
     const uniqueFloors = window.sortFloorsArray([...new Set(dbPoints.map(p => p.floor).filter(Boolean))]);
     
     let selectedFloor = '', selectedName = '';
@@ -1787,15 +1861,78 @@ window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxIn
     let floorOpts = '<option value="">-- 選樓層 --</option>';
     uniqueFloors.forEach(f => { floorOpts += `<option value="${f}" ${f === selectedFloor ? 'selected' : ''}>${f}</option>`; });
     
-    const div = document.createElement('div'); div.className = 'point-input-row';
+    const div = document.createElement('div');
+    div.className = 'point-input-row';
     div.innerHTML = `
-        <input type="number" class="form-control point-order" value="${orderNumber}" onchange="window.handleOrderChange(this)" style="width: 60px; text-align: center; font-weight: bold; background: #e8f0fe;">
+        <input type="number" class="form-control point-order" value="${orderNumber || 1}" onchange="window.handleOrderChange(this)" style="width: 60px; text-align: center; font-weight: bold; background: #e8f0fe;">
         <select class="form-control point-floor-select" onchange="window.updateNameOptions(this)" style="flex: 1.2;">${floorOpts}</select>
         <select class="form-control point-name-select" style="flex: 1.5;"><option value="">-- 先選樓層 --</option></select>
         <input type="number" class="form-control point-interval" value="${maxInterval}" min="0" style="width: 85px;" placeholder="限時(分)" title="距離上個點的超時限制(分鐘)">
-        <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="padding: 10px;">❌</button>`;
-    container.appendChild(div);
-    if (selectedFloor) window.updateNameOptions(div.querySelector('.point-floor-select'), selectedName);
+        <button type="button" class="btn btn-danger" onclick="window.removePointRow(this)" style="padding: 10px;" title="刪除此點">❌</button>
+        
+        <!-- 🌟 兩點之間的「＋」懸浮插入觸發區 -->
+        <div class="row-insert-trigger" onclick="window.insertPointRowAfter(this.parentElement)" title="在此處插入新巡邏點">
+            <span class="row-insert-line-left"></span>
+            <span class="row-insert-btn">＋</span>
+            <span class="row-insert-line-right"></span>
+        </div>
+    `;
+
+    if (selectedFloor) {
+        window.updateNameOptions(div.querySelector('.point-floor-select'), selectedName);
+    }
+    return div;
+};
+
+// 🌟 底部直接新增點位 (維持既有行為)
+window.addPointInputRow = function(fullPointName = '', orderNumber = null, maxInterval = 0) {
+    const container = document.getElementById('pointsInputContainer');
+    if (orderNumber === null) {
+        orderNumber = container.querySelectorAll('.point-input-row').length + 1;
+    }
+    const row = window.createPointRowElement(fullPointName, orderNumber, maxInterval);
+    container.appendChild(row);
+};
+
+// 🌟 在指定點位下方插入一個全新點位
+window.insertPointRowAfter = function(targetRow) {
+    if (!targetRow) return;
+
+    // 1. 建立空點位
+    const newRow = window.createPointRowElement('', 1, 0);
+    newRow.classList.add('row-just-inserted');
+
+    // 2. 插入到目標點位的正後方
+    if (targetRow.nextSibling) {
+        targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
+    } else {
+        targetRow.parentNode.appendChild(newRow);
+    }
+
+    // 3. 自動刷新所有點位的編號 (1, 2, 3...)
+    window.renumberPointRows();
+
+    // 4. 自動聚焦在新點位的樓層選單上
+    const floorSelect = newRow.querySelector('.point-floor-select');
+    if (floorSelect) floorSelect.focus();
+};
+
+// 🌟 刪除單列點位並同步刷新號碼
+window.removePointRow = function(btn) {
+    const row = btn.closest('.point-input-row');
+    if (row) {
+        row.remove();
+        window.renumberPointRows();
+    }
+};
+
+// 🌟 重新校正點位編號
+window.renumberPointRows = function() {
+    const rows = document.querySelectorAll('#pointsInputContainer .point-input-row');
+    rows.forEach((r, idx) => {
+        const orderInput = r.querySelector('.point-order');
+        if (orderInput) orderInput.value = idx + 1;
+    });
 };
 
 window.updateNameOptions = function(floorSelectElem, preSelectedName = '') {
