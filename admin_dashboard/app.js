@@ -1775,7 +1775,6 @@ window.openRouteModal = function(routeId = null) {
 // 路線點位輸入列管理 (支援兩點間懸浮「＋」快速插入)
 // ==========================================
 (function injectInsertPointStyles() {
-(function injectInsertPointStyles() {
     const existing = document.getElementById('insertPointCustomStyle');
     if (existing) existing.remove();
 
