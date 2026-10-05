@@ -401,7 +401,6 @@
     </div>
 
     <!-- 巡邏點位彈窗 (支援單筆與批量新增) -->
-   <!-- 巡邏點位彈窗 (支援單筆與批量新增) -->
     <div id="pointModal" class="modal">
         <div class="modal-content" style="width: 520px;">
             <h3 id="pointModalTitle">新增巡邏點位</h3>
@@ -507,6 +506,19 @@
                         <span>設定巡邏點與順序</span>
                         <span style="font-size: 12px; font-weight: normal; color: #666;">*修改編號可自動排序，限時設為0表示無限制</span>
                     </label>
+
+                    <!-- 🌟 1. 新增：路線樓層快速篩選提示列 -->
+                    <div style="background: #eef5fc; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #d0e3fc;">
+                        <div>
+                            <strong style="font-size: 13px; color: var(--primary);">🏢 本路線專用樓層：</strong>
+                            <span id="routeFloorFilterStatus" style="font-size: 13px; color: #555;">(顯示全部大樓樓層)</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" class="btn btn-primary" style="padding: 5px 12px; font-size: 12px; margin: 0;" onclick="window.openFloorPickerModal()">⚙️ 挑選路線樓層</button>
+                            <button type="button" class="btn btn-secondary" id="btnClearFloorFilter" style="display:none; padding: 5px 10px; font-size: 12px; margin: 0;" onclick="window.clearFloorFilter()">重設全部</button>
+                        </div>
+                    </div>
+
                     <div id="pointsInputContainer"></div>
                     <button type="button" class="btn btn-warning" style="width: 100%; margin-top: 10px;" onclick="window.addPointInputRow()">➕ 從資料庫加入巡邏點</button>
                 </div>
@@ -605,7 +617,56 @@
         <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
         <p style="color: white; text-align: center; margin-top: 15px; font-size: 14px; letter-spacing: 1px;">點擊畫面任意處關閉</p>
     </div>
-    
+
+    <!-- 🌟 2. 新增：路線樓層穿梭選擇器彈窗 (Dual Listbox) -->
+    <div id="floorPickerModal" class="modal" style="z-index: 2200;">
+        <div class="modal-content" style="width: 620px; max-width: 95%;">
+            <h3 style="margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                🏢 挑選本路線巡邏樓層
+            </h3>
+            <p style="font-size: 13px; color: #666; margin-top: -5px; line-height: 1.5;">
+                把此路線會用到的樓層移到右方。套用後，下方新增點位時的「樓層選單」將只會列出這些樓層！<br>
+                <small style="color: #888;">💡 提示：點選後按中間箭頭，或直接「雙擊樓層」即可快速左右移動。</small>
+            </p>
+
+            <div style="display: flex; gap: 15px; align-items: center; margin: 15px 0;">
+                <!-- 左欄：所有可用樓層庫 -->
+                <div style="flex: 1;">
+                    <label style="font-weight: bold; font-size: 13px; margin-bottom: 6px; display: block; color: #555;">
+                        📋 大樓現有所有樓層
+                    </label>
+                    <select id="leftFloorsSelect" multiple class="form-control" style="height: 260px; font-size: 14px; padding: 8px;" ondblclick="window.moveFloorsToRight()">
+                    </select>
+                    <span style="font-size: 11px; color: #888; display: block; margin-top: 4px;">支援 Ctrl / Shift 複選</span>
+                </div>
+
+                <!-- 中間：左右箭頭按鈕 -->
+                <div style="display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center;">
+                    <button type="button" class="btn btn-primary" style="padding: 8px 14px; font-size: 16px; margin: 0;" onclick="window.moveFloorsToRight()" title="移至右方">➡️</button>
+                    <button type="button" class="btn btn-secondary" style="padding: 8px 14px; font-size: 16px; margin: 0;" onclick="window.moveFloorsToLeft()" title="移回左方">⬅️</button>
+                    <hr style="width: 100%; border: 0.5px solid #eee; margin: 5px 0;">
+                    <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; margin: 0;" onclick="window.moveAllFloorsToRight()" title="全部加入">全選 ⏩</button>
+                    <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; margin: 0;" onclick="window.moveAllFloorsToLeft()" title="全部清空">⏪ 清空</button>
+                </div>
+
+                <!-- 右欄：本路線指定樓層 -->
+                <div style="flex: 1;">
+                    <label style="font-weight: bold; font-size: 13px; margin-bottom: 6px; display: block; color: var(--primary);">
+                        👉 本路線使用樓層
+                    </label>
+                    <select id="rightFloorsSelect" multiple class="form-control" style="height: 260px; font-size: 14px; padding: 8px; border-color: #a7c7ed;" ondblclick="window.moveFloorsToLeft()">
+                    </select>
+                    <span id="rightFloorsCount" style="font-size: 11px; color: var(--primary); font-weight: bold; display: block; margin-top: 4px;">已選 0 個樓層</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-success" style="flex: 2; padding: 10px;" onclick="window.applyFloorPicker()">✅ 確認套用並限制選單</button>
+                <button type="button" class="btn btn-secondary" style="flex: 1; padding: 10px;" onclick="window.closeModal('floorPickerModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="app.js"></script>
 </body>
 </html>
