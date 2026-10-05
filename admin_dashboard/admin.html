@@ -267,14 +267,22 @@
             <!-- 視圖：物業助理需求通知 -->
             <div id="view-assistant" class="view-section">
                 <div class="card">
-                    <div class="card-header">🔔 物業助理需求通知 (管理部專屬)</div>
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>🔔 物業助理需求通知 (管理部專屬)</div>
+                        <!-- 🌟 新增：批次匯出 PDF 按鈕 -->
+                        <button id="exportAssistantPdfBtn" class="btn btn-info" style="margin: 0; padding: 6px 14px; font-size: 13px;" onclick="window.exportAssistantRequestsPDF()">📥 匯出所選單據 (PDF)</button>
+                    </div>
                     <table>
                         <thead>
                             <tr>
+                                <!-- 🌟 新增：全選 Checkbox -->
+                                <th style="width: 4%; text-align: center;">
+                                    <input type="checkbox" id="selectAllAssistant" onclick="window.toggleAllAssistant(this)" style="transform: scale(1.3); cursor: pointer;">
+                                </th>
                                 <th style="width: 12%;">單號</th>
                                 <th style="width: 15%;">發生地點</th>
-                                <th style="width: 38%;">需求說明與照片</th>
-                                <th style="width: 15%;">提報時間</th>
+                                <th style="width: 35%;">需求說明與照片</th>
+                                <th style="width: 14%;">提報時間</th>
                                 <th style="width: 10%;">狀態</th>
                                 <th style="width: 10%;">操作</th>
                             </tr>
