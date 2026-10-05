@@ -434,6 +434,12 @@ window.loadAssistantRequests = function() {
 
         const photoHtml = order.photo ? `<div style="margin-top:6px;"><img src="${order.photo}" onclick="window.openImageModal('${order.photo}')" style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer; transition:0.2s;"></div>` : '';
 
+        // 🌟 步驟 1：時間欄位同時顯示提報時間與完成時間
+        let timeDisplay = `<div style="color:#666;">${window.escapeHTML(order.dispatchTime || '-')}</div>`;
+        if (order.status === '已完成' && order.completeTime) {
+            timeDisplay += `<div style="margin-top:4px; font-size:11px; color:var(--success); font-weight:bold;">🏁 完成: ${window.escapeHTML(order.completeTime)}</div>`;
+        }
+
         let actionBtn = '';
         if (!order.status || order.status === '待處理') {
             actionBtn = `<button class="btn btn-primary" style="padding: 6px 10px; font-size:13px; margin-bottom: 4px; width: 100%;" onclick="window.takeAssistantRequest('${order.id}')">✋ 接收此單</button><br>`;
@@ -448,7 +454,7 @@ window.loadAssistantRequests = function() {
                 <td><strong>${safeRefNumber}</strong><br><span style="font-size:11px; color:#888;">${order.reporter}</span></td>
                 <td style="color:var(--primary); font-weight:bold;">${safeLocation}</td>
                 <td><div>${safeDesc}</div>${photoHtml}</td>
-                <td style="color:#666; font-size:13px;">${order.dispatchTime}</td>
+                <td style="font-size:12px;">${timeDisplay}</td>
                 <td>${statusBadge}</td>
                 <td>${actionBtn}${delBtn}</td>
             </tr>
@@ -2261,6 +2267,11 @@ window.exportAssistantRequestsPDF = async function() {
         if (order.status === '已完成') statusColor = '#155724';
         else if (order.status === '跟進中') statusColor = '#004085';
 
+        // 🌟 步驟 2：組出完成時間欄位 (僅已完成的單據才顯示)
+        const completeTimeRow = (order.status === '已完成' && order.completeTime) 
+            ? `<div><strong>🏁 完成時間：</strong>${window.escapeHTML(order.completeTime)}</div>` 
+            : '';
+
         let remarkHtml = '';
         if (order.status === '已完成' && order.completionRemark) {
             remarkHtml = `
@@ -2292,6 +2303,7 @@ window.exportAssistantRequestsPDF = async function() {
                     <div><strong>⏰ 提報時間：</strong>${safeTime}</div>
                     <div><strong>👤 處理人員：</strong>${window.escapeHTML(handler)}</div>
                     <div><strong>部門：</strong>${window.escapeHTML(order.department || '管理部')}</div>
+                    ${completeTimeRow}
                 </div>
                 <div style="font-size: 13px; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #eee;">
                     <strong>📝 需求說明：</strong>
