@@ -1308,9 +1308,6 @@ window.loadPointsData = function() {
 };
 
 // ==========================================
-// 點位新增模式切換與快捷輸入
-// ==========================================
-// ==========================================
 // 點位新增模式切換與快捷輸入 (具備自癒動態注入機制)
 // ==========================================
 window.currentPointMode = 'single'; // 'single' 或 'batch'
@@ -1614,8 +1611,6 @@ window.handleImportRoutes = function(event) {
     reader.readAsText(file);
 };
 
-// 🌟 改良：將表格改為「依主路線分組」的視覺化結構
-// 🌟 改良：依主路線「資料夾」分群顯示
 // 🌟 路線表格載入 (絕對隔離版：保證子路線獨立分群)
 window.loadRoutesData = function() {
     const tbody = document.getElementById('routesTableBody'); 
@@ -1666,7 +1661,6 @@ window.loadRoutesData = function() {
         const groupId = `route-group-${groupIndex}`;
         const subRouteCount = groupedRoutes[groupName].length;
 
-        // 🌟 修改 1：預設箭頭轉向 -90 度 (並加上 display: inline-block 確保旋轉有效)
         tbody.innerHTML += `
             <tr style="background-color: #e8f0fe; cursor: pointer; user-select: none;" onclick="window.toggleRouteGroup('${groupId}', this)">
                 <td colspan="6" style="padding: 10px 15px; border-left: 4px solid var(--primary);">
@@ -1694,7 +1688,6 @@ window.loadRoutesData = function() {
             
             const statusBadge = route.isActive !== false ? '<span class="badge badge-success">已啟用</span>' : '<span class="badge badge-danger">已停用</span>';
             
-            // 🌟 修改 2：這裡加上 style="display: none;" 讓它預設藏起來
             tbody.innerHTML += `<tr class="${groupId}" style="display: none;">
                 <td style="padding-left: 30px;"><b style="font-size:14px; color:#666;">${route.routeOrder || '-'}</b></td>
                 <td><strong>${window.escapeHTML(route.name || '未命名路線')}</strong></td>
@@ -1730,11 +1723,13 @@ window.toggleRouteGroup = function(groupId, headerRow) {
         arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
     }
 };
+
+// 🌟🌟🌟 核心修改 2：openRouteModal 加入路線樓層初始化 🌟🌟🌟
 window.openRouteModal = function(routeId = null) {
     const container = document.getElementById('pointsInputContainer'); 
     container.innerHTML = '';
     
-    // 🌟 更新主路線的歷史下拉選單
+    // 更新主路線的歷史下拉選單
     const dataList = document.getElementById('mainRouteDatalist');
     if (dataList) {
         dataList.innerHTML = '';
@@ -1754,6 +1749,15 @@ window.openRouteModal = function(routeId = null) {
         document.getElementById('routeModalGlobalInterval').value = route.globalInterval || 0; 
         document.getElementById('routeModalActive').checked = route.isActive !== false;
         
+        // 🌟 自動抓取該路線既有點位的樓層填入已選清單
+        const existingFloors = [];
+        (route.points || []).forEach(pt => {
+            const found = dbPoints.find(p => `${p.floor} ${p.name}` === pt);
+            if (found && found.floor) existingFloors.push(found.floor);
+            else if (pt.split(' ')[0]) existingFloors.push(pt.split(' ')[0]);
+        });
+        window.routeSelectedFloors = window.sortFloorsArray([...new Set(existingFloors)]);
+
         route.points.forEach((pt, idx) => { 
             window.addPointInputRow(pt, idx + 1, (route.pointIntervals && route.pointIntervals[idx] !== undefined) ? route.pointIntervals[idx] : 0); 
         });
@@ -1766,11 +1770,19 @@ window.openRouteModal = function(routeId = null) {
         document.getElementById('routeModalGlobalInterval').value = 0; 
         document.getElementById('routeModalActive').checked = true;
         
+        // 🌟 新增路線時，預設顯示全部樓層
+        window.routeSelectedFloors = [];
+
         window.addPointInputRow('', 1, 0); 
         window.addPointInputRow('', 2, 0);
     }
+
+    // 🌟 更新頂部狀態列
+    window.updateRouteFloorFilterUI();
+
     document.getElementById('routeModal').classList.add('active');
 };
+
 // ==========================================
 // 路線點位輸入列管理 (支援兩點間懸浮「＋」快速插入)
 // ==========================================
@@ -1863,15 +1875,25 @@ window.openRouteModal = function(routeId = null) {
     document.head.appendChild(style);
 })();
 
-// 🌟 核心：建立單一巡邏點 DOM 物件
+// 🌟🌟🌟 核心修改 1：createPointRowElement 支援路線樓層過濾 🌟🌟🌟
 window.createPointRowElement = function(fullPointName = '', orderNumber = null, maxInterval = 0) {
-    const uniqueFloors = window.sortFloorsArray([...new Set(dbPoints.map(p => p.floor).filter(Boolean))]);
-    
+    // 🌟 核心修改：如果有設定本路線專用樓層，選單只載入指定樓層；否則載入所有樓層
+    let availableFloors = (window.routeSelectedFloors && window.routeSelectedFloors.length > 0)
+        ? [...window.routeSelectedFloors]
+        : [...new Set(dbPoints.map(p => p.floor).filter(Boolean))];
+
     let selectedFloor = '', selectedName = '';
     if (fullPointName) {
         const found = dbPoints.find(p => `${p.floor} ${p.name}` === fullPointName);
         if (found) { selectedFloor = found.floor; selectedName = found.name; }
+        // 舊點位的樓層若不在範圍內，仍應保留避免破版
+        if (selectedFloor && !availableFloors.includes(selectedFloor)) {
+            availableFloors.push(selectedFloor);
+        }
     }
+
+    const uniqueFloors = window.sortFloorsArray(availableFloors);
+
     let floorOpts = '<option value="">-- 選樓層 --</option>';
     uniqueFloors.forEach(f => { floorOpts += `<option value="${f}" ${f === selectedFloor ? 'selected' : ''}>${f}</option>`; });
     
@@ -2029,4 +2051,149 @@ window.deleteRoute = async function(id) {
         await window.logDeletion("巡邏路線", route);
         await deleteDoc(doc(db, "routes", id));
     }
+};
+
+// ==========================================
+// 🌟🌟🌟 核心修改 3：路線樓層穿梭選擇器 (Dual Listbox) 🌟🌟🌟
+// ==========================================
+window.routeSelectedFloors = [];
+
+// 點擊「⚙️ 挑選路線樓層」開啟彈窗
+window.openFloorPickerModal = function() {
+    const allBuildingFloors = window.sortFloorsArray([...new Set(dbPoints.map(p => p.floor).filter(Boolean))]);
+    const leftSelect = document.getElementById('leftFloorsSelect');
+    const rightSelect = document.getElementById('rightFloorsSelect');
+    if (!leftSelect || !rightSelect) return;
+
+    leftSelect.innerHTML = '';
+    rightSelect.innerHTML = '';
+
+    const chosenSet = new Set(window.routeSelectedFloors || []);
+
+    allBuildingFloors.forEach(floor => {
+        const opt = document.createElement('option');
+        opt.value = floor;
+        opt.textContent = floor;
+        if (chosenSet.has(floor)) {
+            rightSelect.appendChild(opt);
+        } else {
+            leftSelect.appendChild(opt);
+        }
+    });
+
+    window.updateRightFloorsCount();
+    document.getElementById('floorPickerModal').classList.add('active');
+};
+
+// 將選取的樓層移至右方 (➡️)
+window.moveFloorsToRight = function() {
+    const left = document.getElementById('leftFloorsSelect');
+    const right = document.getElementById('rightFloorsSelect');
+    Array.from(left.selectedOptions).forEach(opt => right.appendChild(opt));
+    window.sortSelectOptions(right);
+    window.updateRightFloorsCount();
+};
+
+// 將選取的樓層移回左方 (⬅️)
+window.moveFloorsToLeft = function() {
+    const left = document.getElementById('leftFloorsSelect');
+    const right = document.getElementById('rightFloorsSelect');
+    Array.from(right.selectedOptions).forEach(opt => left.appendChild(opt));
+    window.sortSelectOptions(left);
+    window.updateRightFloorsCount();
+};
+
+// 全部移至右方 (⏩)
+window.moveAllFloorsToRight = function() {
+    const left = document.getElementById('leftFloorsSelect');
+    const right = document.getElementById('rightFloorsSelect');
+    Array.from(left.options).forEach(opt => right.appendChild(opt));
+    window.sortSelectOptions(right);
+    window.updateRightFloorsCount();
+};
+
+// 全部移回左方 (⏪)
+window.moveAllFloorsToLeft = function() {
+    const left = document.getElementById('leftFloorsSelect');
+    const right = document.getElementById('rightFloorsSelect');
+    Array.from(right.options).forEach(opt => left.appendChild(opt));
+    window.sortSelectOptions(left);
+    window.updateRightFloorsCount();
+};
+
+// 保持清單按建築樓層順序排列 (R/F -> 高樓層 -> 地下層)
+window.sortSelectOptions = function(selectElem) {
+    const opts = Array.from(selectElem.options);
+    const sorted = window.sortFloorsArray(opts.map(o => o.value));
+    selectElem.innerHTML = '';
+    sorted.forEach(f => {
+        const o = document.createElement('option');
+        o.value = f;
+        o.textContent = f;
+        selectElem.appendChild(o);
+    });
+};
+
+window.updateRightFloorsCount = function() {
+    const right = document.getElementById('rightFloorsSelect');
+    const countEl = document.getElementById('rightFloorsCount');
+    if (right && countEl) {
+        countEl.innerText = `已選 ${right.options.length} 個樓層`;
+    }
+};
+
+// 點擊「確認套用」
+window.applyFloorPicker = function() {
+    const right = document.getElementById('rightFloorsSelect');
+    const chosen = Array.from(right.options).map(o => o.value);
+    window.routeSelectedFloors = window.sortFloorsArray(chosen);
+
+    window.updateRouteFloorFilterUI();
+    window.refreshExistingPointRowsFloorOptions();
+    window.closeModal('floorPickerModal');
+};
+
+// 重設為全部樓層
+window.clearFloorFilter = function() {
+    window.routeSelectedFloors = [];
+    window.updateRouteFloorFilterUI();
+    window.refreshExistingPointRowsFloorOptions();
+};
+
+// 更新巡邏路線視窗內的標籤提示
+window.updateRouteFloorFilterUI = function() {
+    const statusEl = document.getElementById('routeFloorFilterStatus');
+    const clearBtn = document.getElementById('btnClearFloorFilter');
+    if (!statusEl) return;
+
+    if (window.routeSelectedFloors && window.routeSelectedFloors.length > 0) {
+        statusEl.innerHTML = window.routeSelectedFloors.map(f => `<span class="badge badge-info" style="margin-right: 4px; padding: 2px 6px;">${window.escapeHTML(f)}</span>`).join('');
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+    } else {
+        statusEl.innerText = '(顯示全部大樓樓層)';
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
+};
+
+// 當套用樓層限制時，同步更新目前已打開的點位列選單
+window.refreshExistingPointRowsFloorOptions = function() {
+    const rows = document.querySelectorAll('#pointsInputContainer .point-input-row');
+    const availableFloors = (window.routeSelectedFloors && window.routeSelectedFloors.length > 0)
+        ? [...window.routeSelectedFloors]
+        : [...new Set(dbPoints.map(p => p.floor).filter(Boolean))];
+
+    rows.forEach(row => {
+        const floorSelect = row.querySelector('.point-floor-select');
+        if (!floorSelect) return;
+        const currentVal = floorSelect.value;
+        let list = [...availableFloors];
+        if (currentVal && !list.includes(currentVal)) list.push(currentVal);
+        const sorted = window.sortFloorsArray(list);
+
+        let opts = '<option value="">-- 選樓層 --</option>';
+        sorted.forEach(f => {
+            opts += `<option value="${f}" ${f === currentVal ? 'selected' : ''}>${f}</option>`;
+        });
+        floorSelect.innerHTML = opts;
+    });
 };
