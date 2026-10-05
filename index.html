@@ -113,12 +113,31 @@
                 if (isLoggingIn) return; 
 
                 document.getElementById('statusMsg').innerText = "⏳ 驗證成功，正在檢查設備授權...";
-                const username = user.email.replace(VIRTUAL_DOMAIN, '');
-                
+
+                // 🌟 核心修正：如果是別名信箱，反查出真實 username
+                let username = user.email.replace(VIRTUAL_DOMAIN, '');
+                try {
+                    const q = query(collection(db, "users"), where("authEmail", "==", user.email));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) username = snap.docs[0].id;
+                } catch(e) {
+                    console.warn("反查真實帳號失敗", e);
+                }
+
                 try {
                     const userDoc = await getDoc(doc(db, "users", username));
                     if (userDoc.exists()) {
                         const data = userDoc.data();
+
+                        // 🌟 核心修正：若管理員改了密碼，強制踢除舊連線
+                        if (data.authEmail && data.authEmail !== user.email) {
+                            auth.signOut();
+                            localStorage.removeItem('patrolSessionId');
+                            document.getElementById('statusMsg').innerText = "⚠️ 密碼已更新，請重新登入";
+                            alert("⚠️ 此帳號的密碼已被管理員重設，請使用新密碼重新登入！");
+                            return;
+                        }
+
                         const dbSessionId = data.currentSessionId;
                         const myLocalSessionId = localStorage.getItem('patrolSessionId');
 
@@ -163,7 +182,17 @@
             
             // 開啟防衝突鎖
             isLoggingIn = true;
-            const virtualEmail = `${un}${VIRTUAL_DOMAIN}`;
+
+            // 🌟 核心修正：先檢查 Firestore 該帳號是否已被管理員重設密碼
+            let virtualEmail = `${un}${VIRTUAL_DOMAIN}`;
+            try {
+                const userDoc = await getDoc(doc(db, "users", un));
+                if (userDoc.exists() && userDoc.data().authEmail) {
+                    virtualEmail = userDoc.data().authEmail;
+                }
+            } catch (e) {
+                console.warn("查詢最新信箱失敗，嘗試使用預設信箱", e);
+            }
 
             try {
                 // 1. 先登入 Firebase
