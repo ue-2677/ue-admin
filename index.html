@@ -85,7 +85,7 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         // 🚨 加上 updateDoc，用來把新鑰匙寫入雲端
-        import { getFirestore, doc, getDoc, updateDoc } 
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs } 
         from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // 🌟 貼上共用的 Firebase Config
