@@ -130,7 +130,7 @@
                             <th style="padding:10px; border-bottom:1px solid #ddd;">單號 / 部門</th>
                             <th style="padding:10px; border-bottom:1px solid #ddd;">地點</th>
                             <th style="padding:10px; border-bottom:1px solid #ddd; width:30%;">說明</th>
-                            <th style="padding:10px; border-bottom:1px solid #ddd;">派發時間</th>
+                            <th style="padding:10px; border-bottom:1px solid #ddd;">派發 / 完成時間</th>
                             <th style="padding:10px; border-bottom:1px solid #ddd;">狀態</th>
                         </tr>
                     </thead>
@@ -403,7 +403,7 @@
             
             // 打開視窗並顯示載入中
             modal.style.display = 'flex';
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">讀取雲端工單資料中...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">讀取雲端工單資料中...</td></tr>';
             
             try {
                 // 從資料庫抓取工單，並利用 dispatcherUsername 過濾出屬於自己發的單
@@ -421,7 +421,7 @@
                 tbody.innerHTML = '';
                 
                 if (orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">您目前沒有派發任何工單。</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">您目前沒有派發任何工單。</td></tr>';
                     return;
                 }
                 
@@ -449,12 +449,24 @@
                     if (order.status === '已完成' && order.completionRemark) {
                         safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
                     }
-                    
+
+                    // 🌟 計算派發與完成時間
+                    let timeDisplay = `<div style="color:#666;">${window.escapeHTML(order.dispatchTime || '-')}</div>`;
+                    if (order.status === '已完成') {
+                        const cTime = order.completeTime || order.completedTime || order.finishTime;
+                        if (cTime) {
+                            timeDisplay += `<div style="margin-top:4px; font-size:11px; color:var(--success); font-weight:bold;">🏁 完成: ${window.escapeHTML(cTime)}</div>`;
+                        } else {
+                            timeDisplay += `<div style="margin-top:4px; font-size:11px; color:#888;">🏁 完成: (舊單無紀錄)</div>`;
+                        }
+                    }
+
                     tbody.innerHTML += `
                         <tr style="border-bottom: 1px solid #eee;">
                             <td style="padding:10px;"><strong>${safeRef}</strong><br><span style="font-size:11px; color:#888;">${safeDept}</span></td>
                             <td style="padding:10px; color:var(--primary); font-weight:bold;">${safeLoc}</td>
                             <td style="padding:10px; font-size:12px;">${safeDesc}</td>
+                            <td style="padding:10px; font-size:12px;">${timeDisplay}</td>
                             <td style="padding:10px; text-align:center;">${statusBadge}</td>
                         </tr>
                     `;
