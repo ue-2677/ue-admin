@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大樓巡邏系統 - 工程部派單後台</title>
     <link rel="stylesheet" href="../common.css">
+    <!-- 引入 PDF 產生套件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #007bff; --bg: #f4f6f9; --text: #333; --danger: #dc3545; --warning: #ffc107; --success: #28a745; --secondary: #6c757d; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -12,7 +14,7 @@
         .topbar h2 { margin: 0; font-size: 22px; color: var(--primary); }
         .content-body { padding: 30px; flex-grow: 1; overflow-y: auto; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; gap: 10px;}
         .card-header h3 { margin: 0; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: top; }
@@ -35,14 +37,11 @@
         .form-group label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         
-        /* 🌟 個人選單與下拉樣式 */
         .profile-trigger { cursor: pointer; user-select: none; position: relative; z-index: 10; display: inline-flex; align-items: center; background: #e8f0fe; padding: 8px 12px; border-radius: 8px; color: var(--primary); font-weight: bold; font-size: 14px; transition: 0.2s; border: 1px solid #d2e3fc; }
-        .profile-trigger:active { background: #d2e3fc; }
         .profile-dropdown-content { display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; width: 140px; z-index: 1000; border: 1px solid #eee; }
         .profile-dropdown-content.active { display: block; animation: fadeIn 0.2s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🌟 管理員返回後台專用浮動按鈕 */
         .fab-back-admin {
             position: fixed; bottom: 20px; left: 20px; width: 55px; height: 55px;
             background-color: #6c757d; color: white; border-radius: 50%;
@@ -50,47 +49,34 @@
             font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;
             z-index: 1000; border: none; transition: transform 0.2s; text-decoration: none;
         }
-        .fab-back-admin:active { transform: scale(0.9); }
 
-        /* ========================================= */
-        /* 📱 手機版專屬樣式 (螢幕寬度小於 768px 時自動觸發) */
-        /* ========================================= */
         @media (max-width: 768px) {
             .topbar { flex-direction: column; align-items: flex-start; padding: 15px; gap: 12px; }
-            .topbar h2 { font-size: 20px; }
-            .topbar div { width: 100%; justify-content: space-between; flex-wrap: wrap; }
-            
             .content-body { padding: 10px; }
             .card { padding: 15px 10px; }
-            .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-            
             table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
             thead tr { display: none; } 
-            
             tr { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); background: white; }
             td { border: none; border-bottom: 1px dashed #eee; position: relative; padding: 10px 0 10px 85px; text-align: left; min-height: 24px; }
             td:last-child { border-bottom: none; padding: 15px 0 5px 0; text-align: center; }
-            
             td::before { position: absolute; top: 12px; left: 0; width: 75px; font-weight: bold; color: var(--primary); font-size: 13px; }
-            td:nth-of-type(1)::before { content: "編號 :"; }
-            td:nth-of-type(2)::before { content: "地點 :"; }
-            td:nth-of-type(3)::before { content: "說明 :"; }
-            td:nth-of-type(4)::before { content: "時間 :"; }
-            td:nth-of-type(5)::before { content: "狀態 :"; }
-            
+            td:nth-of-type(1)::before { content: "選擇 :"; }
+            td:nth-of-type(2)::before { content: "編號 :"; }
+            td:nth-of-type(3)::before { content: "地點 :"; }
+            td:nth-of-type(4)::before { content: "說明 :"; }
+            td:nth-of-type(5)::before { content: "時間 :"; }
+            td:nth-of-type(6)::before { content: "狀態 :"; }
             .btn { width: 100%; margin-bottom: 8px; padding: 12px; font-size: 15px; box-sizing: border-box; display: block; }
         }
     </style>
 </head>
 <body>
 
-    <!-- 頂部導覽列 -->
     <div class="topbar">
         <h2>🔧 工程部 - 工單維修處理系統</h2>
         <div style="display: flex; align-items: center; gap: 15px;">
             <span id="clock" style="font-size: 14px; color: #666;"></span>
             <div style="border-left: 1px solid #ccc; height: 20px;"></div>
-            
             <div style="position: relative;">
                 <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)">👤 載入中 ▼</div>
                 <div id="profileMenu" class="profile-dropdown-content">
@@ -102,7 +88,6 @@
     </div>
     
     <div class="content-body">
-        <!-- 🌟 每日注意事項跑馬燈區塊 -->
         <div id="dailyNoticeContainer" style="display:none; background:#fff3cd; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
             <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
@@ -111,10 +96,13 @@
         <div class="card">
             <div class="card-header">
                 <h3>📋 待處理與完工紀錄</h3>
-                <button class="btn btn-warning" onclick="window.exportWorkOrders()">📤 備份工單紀錄</button>
+                <div>
+                    <!-- 🌟 匯出 PDF 按鈕 -->
+                    <button class="btn btn-info" id="exportPdfBtn" onclick="window.exportWorkOrdersPDF()">📥 匯出所選工單 (PDF)</button>
+                    <button class="btn btn-warning" onclick="window.exportWorkOrders()">📤 備份工單紀錄</button>
+                </div>
             </div>
             
-            <!-- 👇 篩選器面板 👇 -->
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #eee;">
                 <div style="flex: 1; min-width: 140px;">
                     <label style="font-size: 12px; color: #666; font-weight: bold; margin-bottom:4px; display:block;">🔍 關鍵字搜尋</label>
@@ -145,22 +133,22 @@
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 4%; text-align: center;"><input type="checkbox" id="selectAllOrders" onclick="window.toggleAllOrders(this)" style="transform: scale(1.3); cursor: pointer;"></th>
                         <th style="width: 12%;">工單編號</th>
-                        <th style="width: 15%;">地點</th>
-                        <th style="width: 33%;">狀況說明與照片</th>
-                        <th style="width: 12%;">派單時間</th>
+                        <th style="width: 14%;">地點</th>
+                        <th style="width: 32%;">狀況說明與照片</th>
+                        <th style="width: 14%;">派單 / 完成時間</th>
                         <th style="width: 8%;">狀態</th>
-                        <th style="width: 20%;">操作</th>
+                        <th style="width: 16%;">操作</th>
                     </tr>
                 </thead>
                 <tbody id="workOrderTableBody">
-                    <tr><td colspan="6" style="text-align:center; color:#999;">連線中...</td></tr>
+                    <tr><td colspan="7" style="text-align:center; color:#999;">連線中...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- 管理員返回後台浮動按鈕 -->
     <button id="adminBackBtn" class="fab-back-admin" onclick="window.location.replace('../admin_dashboard/')">⬅️</button>
 
     <!-- 完工回報彈窗 -->
@@ -198,7 +186,6 @@
         </div>
     </div>
     
-    <!-- 圖片點擊放大預覽視窗 -->
     <div id="imageViewerModal" class="modal" onclick="window.closeImageModal()" style="display: none; z-index: 9999; background: rgba(0,0,0,0.85); flex-direction: column;">
         <span style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
         <img id="enlargedImage" style="max-width: 95%; max-height: 85vh; margin: auto; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
@@ -295,24 +282,9 @@
             }
         };
 
-        window.playAlertSound = function() {
-            const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-            audio.play().catch(e => console.log("音效可能被瀏覽器阻擋", e));
-        };
-
-        window.showSystemNotification = function(title, body) {
-            if ("Notification" in window && Notification.permission === "granted") {
-                new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827370.png' });
-            }
-        };
-
         let isInitialLoad = true;
 
         function initRealtimeListeners() {
-            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-                Notification.requestPermission();
-            }
-
             const myDeptName = "工程部";
 
             onSnapshot(collection(db, "users"), (snapshot) => {
@@ -324,21 +296,7 @@
                 dbWorkOrders = [];
                 snapshot.forEach(doc => { dbWorkOrders.push({ id: doc.id, ...doc.data() }); });
                 window.renderWorkOrders();
-
-                if (!isInitialLoad) {
-                    snapshot.docChanges().forEach((change) => {
-                        if (change.type === "added") {
-                            const data = change.doc.data();
-                            if (data.dispatcherUsername !== currentUser.username) {
-                                window.playAlertSound();
-                                window.showSystemNotification(`🔔 收到新工單 (${myDeptName})`, `地點: ${data.location}\n說明: ${data.description || '無文字說明'}`);
-                            }
-                        }
-                    });
-                }
             });
-
-            setTimeout(() => { isInitialLoad = false; }, 3000);
 
             onSnapshot(collection(db, "notices"), (snapshot) => {
                 const today = window.getLocalDateStr(false);
@@ -349,8 +307,8 @@
 
                 snapshot.forEach(docSnap => {
                     const notice = docSnap.data();
-                    const sDate = notice.startDate.replace(/-/g, '');
-                    const eDate = notice.endDate.replace(/-/g, '');
+                    const sDate = (notice.startDate || '').replace(/-/g, '');
+                    const eDate = (notice.endDate || '').replace(/-/g, '');
                     
                     if (today >= sDate && today <= eDate && (notice.departments.includes(myDeptName) || notice.departments.includes('全體'))) {
                         hasNotice = true;
@@ -374,9 +332,16 @@
             window.renderWorkOrders();
         };
 
+        // 🌟 勾選全部工單
+        window.toggleAllOrders = function(source) {
+            document.querySelectorAll('.order-checkbox').forEach(chk => chk.checked = source.checked);
+        };
+
         window.renderWorkOrders = function() {
             const tbody = document.getElementById('workOrderTableBody');
             tbody.innerHTML = '';
+            const selectAll = document.getElementById('selectAllOrders');
+            if (selectAll) selectAll.checked = false;
             
             const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
             const startDateRaw = document.getElementById('filterStartDate').value; 
@@ -403,7 +368,7 @@
             filteredOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
 
             if (filteredOrders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 30px;">找不到符合條件的工單。</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999; padding: 30px;">找不到符合條件的工單。</td></tr>';
                 return;
             }
 
@@ -429,11 +394,21 @@
                     statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
                 }
 
+                // 🌟 同時顯示派發時間與完成時間
+                let timeDisplay = `<div style="color:#666;">${window.escapeHTML(order.dispatchTime || '-')}</div>`;
+                if (order.status === '已完成') {
+                    const cTime = order.completeTime || order.completedTime || order.finishTime;
+                    if (cTime) {
+                        timeDisplay += `<div style="margin-top:4px; font-size:11px; color:var(--success); font-weight:bold;">🏁 完成: ${window.escapeHTML(cTime)}</div>`;
+                    } else {
+                        timeDisplay += `<div style="margin-top:4px; font-size:11px; color:#888;">🏁 完成: (舊單無紀錄)</div>`;
+                    }
+                }
+
                 const initialPhotoHtml = order.photo 
                     ? `<div style="margin-top:6px;">
                         <img src="${order.photo}" onclick="window.openImageModal('${order.photo}')" 
-                             style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer; transition:0.2s;" 
-                             onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                             style="max-height:80px; border-radius:4px; border:1px solid #ddd; object-fit:contain; cursor:pointer;" title="點擊放大">
                        </div>` 
                     : '';
 
@@ -442,8 +417,7 @@
                         <strong>✅ 完工回報：</strong>${safeRemark}<br>
                         ${order.completePhoto ? `
                             <img src="${order.completePhoto}" onclick="window.openImageModal('${order.completePhoto}')" 
-                                 style="max-height:80px; margin-top:5px; border-radius:4px; border:1px solid #ccc; object-fit:contain; cursor:pointer; transition:0.2s;" 
-                                 onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" title="點擊放大">
+                                 style="max-height:80px; margin-top:5px; border-radius:4px; border:1px solid #ccc; object-fit:contain; cursor:pointer;" title="點擊放大">
                         ` : ''}
                        </div>`
                     : '';
@@ -461,6 +435,7 @@
 
                 tbody.innerHTML += `
                     <tr>
+                        <td style="text-align: center;"><input type="checkbox" class="order-checkbox" value="${order.id}" style="transform: scale(1.3); cursor: pointer;"></td>
                         <td><strong>${safeRefNumber}</strong><br><span style="font-size:11px; color:#888;">通報人: ${safeReporter}</span></td>
                         <td style="color:var(--primary); font-weight:bold;">${safeLocation}</td>
                         <td>
@@ -468,12 +443,133 @@
                             ${initialPhotoHtml}
                             ${completeInfoHtml}
                         </td>
-                        <td style="color:#666; font-size:13px;">${order.dispatchTime}</td>
+                        <td style="font-size:12px;">${timeDisplay}</td>
                         <td>${statusBadge}</td>
                         <td>${actionBtns}</td>
                     </tr>
                 `;
             });
+        };
+
+        // 🌟 批次匯出工單成 PDF
+        window.exportWorkOrdersPDF = async function() {
+            const checkedBoxes = document.querySelectorAll('.order-checkbox:checked');
+            if (checkedBoxes.length === 0) {
+                alert("⚠️ 請先勾選要匯出的工單！");
+                return;
+            }
+
+            const selectedIds = Array.from(checkedBoxes).map(c => c.value);
+            const selectedOrders = dbWorkOrders.filter(o => selectedIds.includes(o.id));
+            selectedOrders.sort((a, b) => b.refNumber.localeCompare(a.refNumber));
+
+            const btn = document.getElementById('exportPdfBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "⏳ 產生 PDF 中...";
+
+            const printContainer = document.createElement('div');
+            printContainer.style.padding = '20px';
+            printContainer.style.background = '#ffffff';
+            printContainer.style.color = '#333333';
+            printContainer.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+
+            let html = `
+                <div style="border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 20px;">
+                    <h2 style="margin: 0 0 6px 0; color: #007bff; font-size: 22px;">🔧 工程部工單維修處理報表</h2>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666;">
+                        <span>匯出時間：${new Date().toLocaleString()}</span>
+                        <span>匯出總單數：<strong>${selectedOrders.length}</strong> 筆</span>
+                    </div>
+                </div>
+            `;
+
+            selectedOrders.forEach(order => {
+                const safeRef = window.escapeHTML(order.refNumber || '無單號');
+                const safeLoc = window.escapeHTML(order.location || '未標註');
+                const safeReporter = window.escapeHTML(order.reporter || '未知');
+                const safeDispatchTime = window.escapeHTML(order.dispatchTime || '-');
+                const safeStatus = window.escapeHTML(order.status || '待處理');
+                const handler = order.completer || order.assignee || '尚未接收';
+                const safeDesc = window.escapeHTML(order.description || '無文字說明');
+                const safeCompleteTime = order.completeTime || order.completedTime || '-';
+                
+                let statusColor = '#856404';
+                if (order.status === '已完成') statusColor = '#155724';
+                else if (order.status === '跟進中') statusColor = '#004085';
+
+                const completeTimeHtml = (order.status === '已完成') 
+                    ? `<div><strong>🏁 完成時間：</strong>${safeCompleteTime}</div>` 
+                    : '';
+
+                const initialPhotoHtml = order.photo ? `
+                    <div style="margin-top: 8px;">
+                        <img src="${order.photo}" style="max-height: 140px; border: 1px solid #ddd; border-radius: 4px; object-fit: contain;">
+                    </div>` : '';
+
+                const completePhotoHtml = order.completePhoto ? `
+                    <div style="margin-top: 8px;">
+                        <img src="${order.completePhoto}" style="max-height: 140px; border: 1px solid #ddd; border-radius: 4px; object-fit: contain;">
+                    </div>` : '';
+
+                let completeInfoHtml = '';
+                if (order.status === '已完成' && (order.completeRemark || order.completePhoto)) {
+                    completeInfoHtml = `
+                        <div style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-left: 4px solid #28a745; border-radius: 4px; font-size: 13px;">
+                            <strong style="color: #155724;">✅ 完工處理回報：</strong>${window.escapeHTML(order.completeRemark || '無備註說明')}
+                            ${completePhotoHtml}
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div style="border: 1px solid #ddd; border-radius: 8px; margin-bottom: 18px; padding: 15px; background: #fdfdfd; page-break-inside: avoid;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+                            <div>
+                                <span style="font-size: 15px; font-weight: bold; color: #007bff;">#${safeRef}</span>
+                                <span style="font-size: 12px; color: #666; margin-left: 10px;">通報人: ${safeReporter}</span>
+                            </div>
+                            <span style="font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 4px; background: #eee; color: ${statusColor};">
+                                狀態：${safeStatus}
+                            </span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-bottom: 10px;">
+                            <div><strong>📍 地點：</strong>${safeLoc}</div>
+                            <div><strong>⏰ 派單時間：</strong>${safeDispatchTime}</div>
+                            <div><strong>👤 處理人員：</strong>${window.escapeHTML(handler)}</div>
+                            ${completeTimeHtml}
+                        </div>
+                        <div style="font-size: 13px; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #eee;">
+                            <strong>📝 狀況說明：</strong>
+                            <div style="margin-top: 4px; line-height: 1.5; color: #333;">${safeDesc}</div>
+                            ${initialPhotoHtml}
+                        </div>
+                        ${completeInfoHtml}
+                    </div>
+                `;
+            });
+
+            printContainer.innerHTML = html;
+            document.body.appendChild(printContainer);
+
+            try {
+                const opt = {
+                    margin: [10, 10, 15, 10],
+                    filename: `工程部工單匯出_${window.getLocalDateStr(false)}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'], avoid: ['div'] }
+                };
+                await html2pdf().set(opt).from(printContainer).save();
+            } catch (e) {
+                console.error("PDF 匯出失敗:", e);
+                alert("匯出 PDF 發生錯誤，請稍後再試。");
+            } finally {
+                document.body.removeChild(printContainer);
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         };
 
         window.takeWorkOrder = async function(orderId) {
@@ -499,10 +595,8 @@
             const order = dbWorkOrders.find(o => o.id === orderId);
             currentCompleteOrderId = orderId;
             currentCompletePhotoBase64 = order.completePhoto || "";
-            
             document.getElementById('completePhotoInput').value = '';
             document.getElementById('completeTextInput').value = order.completeRemark || "";
-            
             if(order.completePhoto) {
                 document.getElementById('completePhotoPreview').src = order.completePhoto;
                 document.getElementById('completePhotoPreview').style.display = 'block';
@@ -526,7 +620,6 @@
                     canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    
                     currentCompletePhotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
                     const preview = document.getElementById('completePhotoPreview');
                     preview.src = currentCompletePhotoBase64;
@@ -540,7 +633,6 @@
         window.submitComplete = async function() {
             const text = document.getElementById('completeTextInput').value.trim();
             const photo = currentCompletePhotoBase64;
-            
             if (!text && !photo) {
                 if (!confirm("您沒有加上任何備註或照片，確定要送出嗎？")) return;
             }
@@ -563,20 +655,8 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `工程部工單備份_${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = `工程部工單備份_${window.getLocalDateStr(false)}.json`;
             a.click();
-        };
-
-        window.logDeletion = async function(itemType, deletedData) {
-            try {
-                await addDoc(collection(db, "deleteLogs"), {
-                    deletedAt: new Date().toLocaleString(),
-                    deletedTimestamp: Date.now(),
-                    deletedBy: currentUser.name + " (" + currentUser.username + ")",
-                    itemType: itemType,
-                    dataSnapshot: JSON.stringify(deletedData)
-                });
-            } catch (e) { console.error("寫入刪除紀錄失敗", e); }
         };
 
         window.deleteWorkOrder = async function(orderId) {
@@ -584,7 +664,6 @@
             if (!orderData) return;
             if (confirm(`警告：確定要刪除工單 ${orderData.refNumber} 嗎？此操作將被記錄備查。`)) {
                 try {
-                    await window.logDeletion("工程部工單", orderData);
                     await deleteDoc(doc(db, "workOrders", orderId));
                 } catch(e) { alert("刪除失敗"); }
             }
@@ -613,7 +692,6 @@
             const oldPw = document.getElementById('selfOldPassword').value.trim();
             const newPw = document.getElementById('selfNewPassword').value.trim();
             const confPw = document.getElementById('selfConfirmPassword').value.trim();
-            
             if (!oldPw || !newPw || !confPw) { alert("請填寫所有密碼欄位！"); return; }
             if (newPw !== confPw) { alert("新密碼不相符！"); return; }
             if (newPw.length < 6) { alert("新密碼至少需要 6 個字元！"); return; }
@@ -622,7 +700,6 @@
                 const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPw);
                 await reauthenticateWithCredential(auth.currentUser, credential);
                 await updatePassword(auth.currentUser, newPw);
-                
                 document.getElementById('selfPasswordModal').style.display = 'none';
                 alert("✅ 密碼修改成功！請使用新密碼重新登入。");
                 await auth.signOut();
