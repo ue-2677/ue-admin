@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>23 Sung On Street 消防設備編號查詢</title>
+  <style>
+    :root {
+      --primary: #d32f2f;
+      --primary-soft: rgba(211, 47, 47, 0.1);
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --sub: #64748b;
+      --border: #cbd5e1;
+      --chip: #e2e8f0;
+      --smoke: #0284c7;
+      --heat: #ea580c;
+      --bgu: #dc2626;
+      --wf: #2563eb;
+      --ctrl: #7c3aed;
+      --sup: #475569;
+    }
+    [data-theme="dark"] {
+      --primary: #ef5350;
+      --primary-soft: rgba(239, 83, 80, 0.18);
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --sub: #94a3b8;
+      --border: #334155;
+      --chip: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang HK", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 80px; }
+
+    /* 頂部導航欄 */
+    header {
+      background: linear-gradient(135deg, #b71c1c, #d32f2f);
+      color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.3px; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .header-btn {
+      background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.3);
+      padding: 5px 10px; border-radius: 8px; font-size: 0.78rem; text-decoration: none; cursor: pointer;
+    }
+    header p { font-size: 0.75rem; opacity: 0.9; margin-top: 4px; }
+
+    /* 搜尋與多維度篩選區 */
+    .filter-panel { background: var(--card); padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .search-wrap { position: relative; margin-bottom: 10px; }
+    .search-input {
+      width: 100%; height: 44px; border-radius: 12px; border: 1.5px solid var(--border);
+      padding: 0 38px 0 14px; font-size: 0.98rem; background: var(--bg); color: var(--text); outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .clear-btn {
+      position: absolute; right: 10px; top: 8px; width: 28px; height: 28px;
+      border: none; background: var(--chip); color: var(--text); border-radius: 50%;
+      font-size: 1.1rem; cursor: pointer; display: none;
+    }
+
+    .select-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    select {
+      width: 100%; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-size: 0.8rem; padding: 0 4px; outline: none;
+    }
+
+    /* 快捷篩選標籤 */
+    .quick-bar {
+      display: flex; gap: 7px; overflow-x: auto; padding: 10px 14px;
+      background: var(--card); border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    .quick-bar::-webkit-scrollbar { display: none; }
+    .chip {
+      padding: 5px 12px; border-radius: 16px; font-size: 0.78rem; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); cursor: pointer;
+    }
+    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+
+    /* 狀態統計列 */
+    .status-bar {
+      padding: 8px 16px; font-size: 0.78rem; color: var(--sub);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .reset-link { color: var(--primary); cursor: pointer; font-weight: 600; background: none; border: none; font-size: 0.78rem; }
+
+    /* 設備卡片列表 */
+    .list-container { padding: 6px 14px; display: flex; flex-direction: column; gap: 10px; }
+    .card {
+      background: var(--card); border-radius: 12px; padding: 12px 14px;
+      border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      display: flex; flex-direction: column; gap: 6px; position: relative;
+    }
+    .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .addr-group { display: flex; align-items: center; gap: 8px; }
+    .addr-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 1.15rem; font-weight: 800; color: var(--primary);
+      background: var(--primary-soft); padding: 2px 9px; border-radius: 6px;
+    }
+    .panel-tag { font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: var(--chip); color: var(--text); }
+    .type-badge { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 5px; color: #fff; }
+    .t-smoke { background: var(--smoke); }
+    .t-heat { background: var(--heat); }
+    .t-bgu { background: var(--bgu); }
+    .t-wf { background: var(--wf); }
+    .t-ctrl { background: var(--ctrl); }
+    .t-sup { background: var(--sup); }
+
+    .loc-main { font-size: 1.02rem; font-weight: 700; color: var(--text); line-height: 1.35; }
+    .loc-sub { font-size: 0.88rem; font-weight: 600; color: var(--primary); margin-left: 6px; }
+    .note-box {
+      font-size: 0.78rem; background: rgba(234, 179, 8, 0.15); color: #b45309;
+      padding: 4px 8px; border-radius: 6px; border-left: 3px solid #f59e0b;
+    }
+    [data-theme="dark"] .note-box { color: #fcd34d; }
+
+    .card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--border);
+    }
+    .cbe-text { font-family: monospace; font-size: 0.75rem; color: var(--sub); }
+    .btn-group { display: flex; gap: 6px; }
+    .act-btn {
+      font-size: 0.75rem; padding: 4px 9px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer;
+    }
+    .act-btn.starred { color: #eab308; border-color: #eab308; font-weight: bold; }
+
+    .load-more {
+      margin: 14px; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--card); color: var(--primary); font-weight: 700; font-size: 0.9rem;
+      text-align: center; cursor: pointer;
+    }
+
+    /* 右下角返回至頂懸浮按鈕 */
+    .back-to-top {
+      position: fixed;
+      right: 18px;
+      bottom: 24px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px);
+      transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+    }
+    .back-to-top.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .back-to-top:active {
+      transform: scale(0.92);
+    }
+    .back-to-top span.arrow {
+      font-size: 1.1rem;
+      line-height: 1;
+      font-weight: 800;
+    }
+    .back-to-top span.txt {
+      font-size: 0.62rem;
+      margin-top: 1px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-top">
+      <h1>🔥 23 Sung On Street 消防點位查詢</h1>
+      <div class="header-actions">
+        <button class="header-btn" id="themeBtn" title="切換深淺色">🌓</button>
+        <a href="admin.html" class="header-btn">⚙️ 後台管理</a>
+      </div>
+    </div>
+    <p>支援位置、房號 (如 27F FLAT A)、編號 (L01D001)、區域 (Z139) 即時檢索</p>
+  </header>
+
+  <div class="filter-panel">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" class="search-input" placeholder="輸入位置、編號或簡寫 (例: 27F 1A A / ST-3 / SHOP)..." autofocus>
+      <button class="clear-btn" id="clearBtn">×</button>
+    </div>
+    <div class="select-grid">
+      <select id="panelSelect">
+        <option value="">所有控制盤</option>
+        <option value="Panel 1">Panel 1 (3F-26F)</option>
+        <option value="Panel 2">Panel 2 (27F-RF)</option>
+        <option value="Panel 3">Panel 3 (BF-2F)</option>
+      </select>
+      <select id="floorSelect">
+        <option value="">所有樓層</option>
+      </select>
+      <select id="towerSelect">
+        <option value="">所有座數/區域</option>
+        <option value="TOWER 1A">1A 座 (Tower 1A)</option>
+        <option value="TOWER 1B">1B 座 (Tower 1B)</option>
+        <option value="TOWER 1C">1C 座 (Tower 1C)</option>
+        <option value="LOBBY">電梯大堂 (Lobby)</option>
+        <option value="ST-">樓梯 (ST-1~10)</option>
+        <option value="RM">機房/電房 (RM)</option>
+      </select>
+      <select id="typeSelect">
+        <option value="">所有類型</option>
+        <option value="Smoke">煙感 (Smoke)</option>
+        <option value="Heat">熱感 (Heat)</option>
+        <option value="Monitor">手報/監控 (BGU)</option>
+        <option value="Waterflow">水流掣 (WF)</option>
+        <option value="Track">副閥/監督 (Superv)</option>
+        <option value="Control">警鐘/控制 (Control)</option>
+        <option value="Relay">繼電器 (Relay)</option>
+        <option value="Power">電源 (Power)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="quick-bar">
+    <button class="chip active" data-quick="">全部設備</button>
+    <button class="chip" data-quick="STARRED">⭐ 已收藏</button>
+    <button class="chip" data-quick="FLOW">💧 水流掣</button>
+    <button class="chip" data-quick="BGU">🚨 手動掣(BGU)</button>
+    <button class="chip" data-quick="FIRE SHUTTER">🚪 防煙閘(FSH)</button>
+    <button class="chip" data-quick="SHOP">🏪 地舖(Shop)</button>
+    <button class="chip" data-quick="PUMP">⚙️ 泵房</button>
+    <button class="chip" data-quick="ALARM BELL">🔔 警鐘</button>
+  </div>
+
+  <div class="status-bar">
+    <span id="statText">載入中...</span>
+    <button class="reset-link" id="resetBtn">重設篩選</button>
+  </div>
+
+  <div class="list-container" id="listContainer"></div>
+  <div id="loadMoreWrap"></div>
+
+  <!-- 右下角返回至頂按鈕 -->
+  <button class="back-to-top" id="backToTopBtn" title="返回頂部" aria-label="返回頂部">
+    <span class="arrow">↑</span>
+    <span class="txt">至頂</span>
+  </button>
+
+  <script src="data.js"></script>
+  <script>
+    let allData = window.getAFAData ? window.getAFAData() : (window.AFA_DATA || []);
+    let starredIds = JSON.parse(localStorage.getItem("AFA_STARRED_V1") || "[]");
+    let quickMode = "";
+    let displayLimit = 60;
+    let currentFiltered = [];
+
+    const searchInput = document.getElementById("searchInput");
+    const clearBtn = document.getElementById("clearBtn");
+    const panelSelect = document.getElementById("panelSelect");
+    const floorSelect = document.getElementById("floorSelect");
+    const towerSelect = document.getElementById("towerSelect");
+    const typeSelect = document.getElementById("typeSelect");
+    const listContainer = document.getElementById("listContainer");
+    const loadMoreWrap = document.getElementById("loadMoreWrap");
+    const statText = document.getElementById("statText");
+    const backToTopBtn = document.getElementById("backToTopBtn");
+
+    // 初始化樓層選單
+    const floorOrder = ["B/F", "G/F", "1/F", "2/F", "3F", "5F", "6F", "7F", "8F", "9F", "10F", "11F", "12F", "15F", "16F", "17F", "18F", "19F", "20F", "21F", "22F", "23F", "25F", "26F", "27F", "28F", "29F", "30F", "31F", "32F", "33F", "35F", "R/F", "PANEL"];
+    floorOrder.forEach(f => {
+      const opt = document.createElement("option");
+      opt.value = f;
+      opt.textContent = f === "PANEL" ? "主機/跨層" : f;
+      floorSelect.appendChild(opt);
+    });
+
+    function getTypeClass(type) {
+      const t = (type || "").toUpperCase();
+      if (t.includes("SMOKE")) return ["煙感 Smoke", "t-smoke"];
+      if (t.includes("HEAT")) return ["熱感 Heat", "t-heat"];
+      if (t.includes("WATERFLOW")) return ["水流掣 WF", "t-wf"];
+      if (t.includes("MONITOR")) return ["手報/監控 BGU", "t-bgu"];
+      if (t.includes("CONTROL") || t.includes("RELAY")) return [type, "t-ctrl"];
+      return [type || "其他", "t-sup"];
+    }
+
+    function filterData() {
+      const rawQ = searchInput.value.trim().toUpperCase();
+      clearBtn.style.display = rawQ ? "block" : "none";
+
+      const qTokens = rawQ ? rawQ.replace(/18/g, (m, offset, str) => str.includes("TOWER 18") ? "1B" : m).split(/\s+/) : [];
+      const pVal = panelSelect.value;
+      const fVal = floorSelect.value;
+      const twVal = towerSelect.value;
+      const tyVal = typeSelect.value;
+
+      currentFiltered = allData.filter(item => {
+        if (pVal && item.panel !== pVal) return false;
+        if (fVal && item.floor !== fVal) return false;
+        if (tyVal && !(item.type || "").toUpperCase().includes(tyVal.toUpperCase())) return false;
+
+        const fullStr = `${item.panel} ${item.loop || ""} ${item.add} ${item.type} ${item.label} ${item.sub || ""} ${item.zone || ""} ${item.floor || ""} ${item.note || ""}`.toUpperCase();
+
+        if (twVal && !fullStr.includes(twVal.toUpperCase())) return false;
+
+        if (quickMode === "STARRED") {
+          if (!starredIds.includes(item.id)) return false;
+        } else if (quickMode) {
+          if (!fullStr.includes(quickMode)) return false;
+        }
+
+        if (qTokens.length > 0) {
+          return qTokens.every(tk => fullStr.includes(tk));
+        }
+        return true;
+      });
+
+      displayLimit = 60;
+      renderList();
+    }
+
+    function renderList() {
+      statText.textContent = `共找到 ${currentFiltered.length} 筆設備資料 (總庫存 ${allData.length} 筆)`;
+
+      if (currentFiltered.length === 0) {
+        listContainer.innerHTML = `<div style="text-align:center;padding:50px 20px;color:var(--sub);">找不到符合條件的消防設備，請嘗試放寬關鍵字或按「重設篩選」。</div>`;
+        loadMoreWrap.innerHTML = "";
+        return;
+      }
+
+      const slice = currentFiltered.slice(0, displayLimit);
+      listContainer.innerHTML = slice.map(item => {
+        const [typeLabel, typeCls] = getTypeClass(item.type);
+        const isStar = starredIds.includes(item.id);
+        return `
+          <div class="card">
+            <div class="card-top">
+              <div class="addr-group">
+                <span class="addr-badge">${item.add}</span>
+                <span class="panel-tag">${item.panel}</span>
+              </div>
+              <span class="type-badge ${typeCls}">${typeLabel}</span>
+            </div>
+            <div class="loc-main">
+              ${item.label}
+              ${item.sub ? `<span class="loc-sub">${item.sub}</span>` : ""}
+            </div>
+            ${item.note ? `<div class="note-box">📝 備註：${item.note}</div>` : ""}
+            <div class="card-footer">
+              <span class="cbe-text">CBE: ${item.zone || "無"} | 樓層: ${item.floor || "-"}</span>
+              <div class="btn-group">
+                <button class="act-btn ${isStar ? "starred" : ""}" onclick="toggleStar('${item.id}')">${isStar ? "★ 已收藏" : "☆ 收藏"}</button>
+                <button class="act-btn" onclick="copyText('${item.add}', this)">複製編號</button>
+                <button class="act-btn" onclick="copyText('${item.panel} ${item.add} - ${item.label} ${item.sub || ""}', this)">複製全稱</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      if (currentFiltered.length > displayLimit) {
+        loadMoreWrap.innerHTML = `<div class="load-more" onclick="loadMore()">顯示更多結果 (尚有 ${currentFiltered.length - displayLimit} 筆)...</div>`;
+      } else {
+        loadMoreWrap.innerHTML = "";
+      }
+    }
+
+    window.loadMore = function () {
+      displayLimit += 80;
+      renderList();
+    };
+
+    window.copyText = function (txt, btn) {
+      navigator.clipboard.writeText(txt.trim());
+      const old = btn.textContent;
+      btn.textContent = "✓ 已複製";
+      setTimeout(() => btn.textContent = old, 1200);
+    };
+
+    window.toggleStar = function (id) {
+      if (starredIds.includes(id)) {
+        starredIds = starredIds.filter(x => x !== id);
+      } else {
+        starredIds.push(id);
+      }
+      localStorage.setItem("AFA_STARRED_V1", JSON.stringify(starredIds));
+      if (quickMode === "STARRED") filterData();
+      else renderList();
+    };
+
+    // 滾動監聽：顯示/隱藏右下角「返回至頂」按鈕
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 260) {
+        backToTopBtn.classList.add("show");
+      } else {
+        backToTopBtn.classList.remove("show");
+      }
+    }, { passive: true });
+
+    backToTopBtn.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    // 事件綁定
+    searchInput.addEventListener("input", filterData);
+    clearBtn.addEventListener("click", () => { searchInput.value = ""; filterData(); searchInput.focus(); });
+    [panelSelect, floorSelect, towerSelect, typeSelect].forEach(el => el.addEventListener("change", filterData));
+
+    document.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".chip").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        quickMode = btn.dataset.quick;
+        filterData();
+      });
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      searchInput.value = "";
+      panelSelect.value = "";
+      floorSelect.value = "";
+      towerSelect.value = "";
+      typeSelect.value = "";
+      quickMode = "";
+      document.querySelectorAll(".chip").forEach((b, i) => b.classList.toggle("active", i === 0));
+      filterData();
+    });
+
+    // 深色模式切換
+    const themeBtn = document.getElementById("themeBtn");
+    if (localStorage.getItem("AFA_THEME") === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    themeBtn.addEventListener("click", () => {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (isDark) {
+        document.documentElement.removeAttribute("data-theme");
+        localStorage.setItem("AFA_THEME", "light");
+      } else {
+        document.documentElement.setAttribute("data-theme", "dark");
+        localStorage.setItem("AFA_THEME", "dark");
+      }
+    });
+
+    // 監聽後台更新
+    window.addEventListener("storage", () => {
+      allData = window.getAFAData();
+      filterData();
+    });
+
+    filterData();
+  </script>
+</body>
+</html>
