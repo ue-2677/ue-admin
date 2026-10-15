@@ -32,7 +32,7 @@
       --chip: #334155;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang HK", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 80px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang HK", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 85px; }
 
     /* 頂部導航欄 */
     header {
@@ -137,13 +137,38 @@
       text-align: center; cursor: pointer;
     }
 
+    /* 🌟 左下角返回物業助理派單系統按鈕 (所有人員皆可使用) */
+    .fab-back-assist {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 55px;
+      height: 55px;
+      background-color: #6c757d;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      cursor: pointer;
+      z-index: 1000;
+      border: none;
+      transition: transform 0.2s;
+      text-decoration: none;
+    }
+    .fab-back-assist:active {
+      transform: scale(0.9);
+    }
+
     /* 右下角返回至頂懸浮按鈕 */
     .back-to-top {
       position: fixed;
-      right: 18px;
-      bottom: 24px;
-      width: 46px;
-      height: 46px;
+      right: 20px;
+      bottom: 20px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
       background: var(--primary);
       color: #ffffff;
@@ -174,7 +199,7 @@
       font-weight: 800;
     }
     .back-to-top span.txt {
-      font-size: 0.62rem;
+      font-size: 0.65rem;
       margin-top: 1px;
       font-weight: 600;
     }
@@ -249,6 +274,9 @@
 
   <div class="list-container" id="listContainer"></div>
   <div id="loadMoreWrap"></div>
+
+  <!-- 🌟 左下角返回物業助理派單系統按鈕 (所有用戶皆顯示) -->
+  <button id="assistBackBtn" class="fab-back-assist" onclick="window.location.replace('../assist-5x9k2/')" title="返回物業助理派單系統">⬅️</button>
 
   <!-- 右下角返回至頂按鈕 -->
   <button class="back-to-top" id="backToTopBtn" title="返回頂部" aria-label="返回頂部">
