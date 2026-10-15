@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>消防設備後台管理系統 - 23 Sung On Street</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --sub: #64748b;
+      --border: #cbd5e1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 80px; }
+
+    header {
+      background: #1e293b; color: #fff; padding: 14px 20px;
+      display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { font-size: 1.1rem; }
+    .back-btn {
+      background: #3b82f6; color: #fff; text-decoration: none; padding: 6px 12px;
+      border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+    }
+
+    .container { max-width: 960px; margin: 16px auto; padding: 0 14px; display: flex; flex-direction: column; gap: 16px; }
+
+    .card { background: var(--card); border-radius: 12px; padding: 16px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card h2 { font-size: 1rem; margin-bottom: 12px; color: var(--primary); display: flex; justify-content: space-between; align-items: center; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 0.78rem; font-weight: 600; color: var(--sub); }
+    .form-group input, .form-group select {
+      height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.9rem;
+    }
+
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    button {
+      padding: 8px 14px; border-radius: 8px; border: none; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    }
+    button:active { opacity: 0.8; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-outline { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .search-bar { flex: 1; min-width: 220px; height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: #f1f5f9; font-weight: 700; color: var(--sub); white-space: nowrap; }
+    .mono { font-family: monospace; font-weight: 700; color: #b91c1c; }
+
+    .toast {
+      position: fixed; bottom: 80px; right: 20px; background: #0f172a; color: #fff;
+      padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; display: none; z-index: 200;
+    }
+
+    /* 右下角返回至頂懸浮按鈕 */
+    .back-to-top {
+      position: fixed;
+      right: 18px;
+      bottom: 24px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px);
+      transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+      padding: 0;
+    }
+    .back-to-top.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .back-to-top span.arrow { font-size: 1.1rem; line-height: 1; font-weight: 800; }
+    .back-to-top span.txt { font-size: 0.62rem; margin-top: 1px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🛠️ 消防設備後台管理 (新增 / 修改 / 匯出)</h1>
+    <a href="index.html" class="back-btn">🔍 返回前台查詢</a>
+  </header>
+
+  <div class="container">
+    <!-- 新增 / 編輯表單 -->
+    <div class="card">
+      <h2 id="formTitle">➕ 新增消防設備記錄</h2>
+      <input type="hidden" id="editId" value="">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>控制盤 (Panel) *</label>
+          <select id="fPanel">
+            <option value="Panel 1">Panel 1 (3F-26F)</option>
+            <option value="Panel 2">Panel 2 (27F-RF)</option>
+            <option value="Panel 3">Panel 3 (BF-2F)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>設備編號 (ADD) * 例: L01D001</label>
+          <input type="text" id="fAdd" placeholder="例如 L01D001">
+        </div>
+        <div class="form-group">
+          <label>設備類型 (POINT TYPE) *</label>
+          <select id="fType">
+            <option value="Smoke (Photo)">Smoke (Photo) 煙感</option>
+            <option value="Heat(Rate of Rise)">Heat(Rate of Rise) 熱感</option>
+            <option value="Monitor">Monitor 手報/監控(BGU)</option>
+            <option value="Waterflow">Waterflow 水流掣</option>
+            <option value="Track Superv">Track Superv 閥門/監督</option>
+            <option value="Control">Control 警鐘/控制</option>
+            <option value="Relay">Relay 繼電器</option>
+            <option value="Power Monitr">Power Monitr 電源監控</option>
+            <option value="Non Fire">Non Fire 非火警閥門</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>樓層 (Floor) 例: 27F / B/F</label>
+          <input type="text" id="fFloor" placeholder="例如 27F, G/F, B/F">
+        </div>
+        <div class="form-group">
+          <label>主位置名稱 (LABEL) *</label>
+          <input type="text" id="fLabel" placeholder="例如 27F TOWER 1A FLAT A">
+        </div>
+        <div class="form-group">
+          <label>副標籤 (EXTEND LABEL)</label>
+          <input type="text" id="fSub" placeholder="例如 HR BGU / (FLAT C)">
+        </div>
+        <div class="form-group">
+          <label>CBE 聯動區號</label>
+          <input type="text" id="fZone" placeholder="例如 Z229 Z139">
+        </div>
+        <div class="form-group">
+          <label>維修/現場備註 (選填)</label>
+          <input type="text" id="fNote" placeholder="例如 已更換底座 / 待修">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" id="saveBtn">💾 儲存記錄</button>
+        <button class="btn-outline" id="cancelEditBtn" style="display:none;">取消編輯</button>
+      </div>
+    </div>
+
+    <!-- 資料庫同步與匯出工具 -->
+    <div class="card">
+      <h2>📦 資料庫備份、匯入與永久發佈</h2>
+      <p style="font-size:0.82rem;color:var(--sub);margin-bottom:10px;">
+        修改後的資料會即時儲存在本機瀏覽器中。若要更新給所有其他手機使用，請點擊「匯出最新 data.js」並替換原本的 <code>data.js</code> 檔案。
+      </p>
+      <div class="btn-row">
+        <button class="btn-success" onclick="exportDataJS()">📥 匯出最新 data.js (永久更新用)</button>
+        <button class="btn-outline" onclick="exportCSV()">📊 匯出 Excel (CSV)</button>
+        <button class="btn-outline" onclick="document.getElementById('importFile').click()">📂 匯入 JSON 備份</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+        <button class="btn-danger" onclick="resetToDefault()">🔄 還原出場預設資料</button>
+      </div>
+    </div>
+
+    <!-- 現有記錄搜尋與列表 -->
+    <div class="card">
+      <h2>📋 現有設備清單 (<span id="totalCount">0</span> 筆)</h2>
+      <div class="toolbar">
+        <input type="text" id="adminSearch" class="search-bar" placeholder="搜尋編號、位置、備註以進行修改或刪除...">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>控制盤</th>
+              <th>編號</th>
+              <th>類型</th>
+              <th>位置 (Label / Sub)</th>
+              <th>CBE 區號</th>
+              <th>備註</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- 右下角返回至頂按鈕 -->
+  <button class="back-to-top" id="backToTopBtn" title="返回頂部" aria-label="返回頂部">
+    <span class="arrow">↑</span>
+    <span class="txt">至頂</span>
+  </button>
+
+  <script src="data.js"></script>
+  <script>
+    let db = window.getAFAData ? [...window.getAFAData()] : [];
+
+    const editId = document.getElementById("editId");
+    const fPanel = document.getElementById("fPanel");
+    const fAdd = document.getElementById("fAdd");
+    const fType = document.getElementById("fType");
+    const fFloor = document.getElementById("fFloor");
+    const fLabel = document.getElementById("fLabel");
+    const fSub = document.getElementById("fSub");
+    const fZone = document.getElementById("fZone");
+    const fNote = document.getElementById("fNote");
+    const formTitle = document.getElementById("formTitle");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const adminSearch = document.getElementById("adminSearch");
+    const tbody = document.getElementById("adminTableBody");
+    const totalCount = document.getElementById("totalCount");
+    const backToTopBtn = document.getElementById("backToTopBtn");
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      setTimeout(() => t.style.display = "none", 2200);
+    }
+
+    function persist() {
+      localStorage.setItem("AFA_CUSTOM_DATA_V1", JSON.stringify(db));
+      renderTable();
+    }
+
+    function renderTable() {
+      const q = adminSearch.value.trim().toUpperCase();
+      const filtered = db.filter(item => {
+        if (!q) return true;
+        const s = `${item.panel} ${item.add} ${item.type} ${item.label} ${item.sub || ""} ${item.zone || ""} ${item.note || ""}`.toUpperCase();
+        return q.split(/\s+/).every(w => s.includes(w));
+      });
+
+      totalCount.textContent = `${filtered.length} / ${db.length}`;
+      tbody.innerHTML = filtered.slice(0, 100).map(item => `
+        <tr>
+          <td>${item.panel}</td>
+          <td class="mono">${item.add}</td>
+          <td>${item.type}</td>
+          <td><strong>${item.label}</strong> ${item.sub ? `<span style="color:#dc2626">(${item.sub})</span>` : ""}</td>
+          <td style="font-family:monospace;font-size:0.78rem;">${item.zone || ""}</td>
+          <td style="color:#b45309;">${item.note || ""}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn-outline" style="padding:4px 8px;font-size:0.75rem;" onclick="startEdit('${item.id}')">✏️ 編輯</button>
+            <button class="btn-danger" style="padding:4px 8px;font-size:0.75rem;" onclick="deleteItem('${item.id}')">🗑️</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      const addVal = fAdd.value.trim().toUpperCase();
+      const labelVal = fLabel.value.trim().toUpperCase();
+      if (!addVal || !labelVal) {
+        alert("請填寫「設備編號 (ADD)」與「主位置名稱 (LABEL)」！");
+        return;
+      }
+
+      const record = {
+        id: editId.value || `${fPanel.value.replace(/\s+/g, '')}_${addVal}_${Date.now()}`,
+        panel: fPanel.value,
+        loop: addVal.slice(0, 3),
+        add: addVal,
+        type: fType.value,
+        floor: fFloor.value.trim().toUpperCase() || (labelVal.match(/^\d+F|^B\/F|^G\/F|^1\/F|^2\/F|^R\/F/) || ["PANEL"])[0],
+        label: labelVal,
+        sub: fSub.value.trim().toUpperCase(),
+        zone: fZone.value.trim().toUpperCase(),
+        note: fNote.value.trim()
+      };
+
+      if (editId.value) {
+        const idx = db.findIndex(x => x.id === editId.value);
+        if (idx > -1) db[idx] = record;
+        showToast("✅ 已更新設備記錄！");
+      } else {
+        db.unshift(record);
+        showToast("✅ 已新增設備記錄！");
+      }
+
+      resetForm();
+      persist();
+    });
+
+    window.startEdit = function (id) {
+      const item = db.find(x => x.id === id);
+      if (!item) return;
+      editId.value = item.id;
+      fPanel.value = item.panel;
+      fAdd.value = item.add;
+      fType.value = item.type;
+      fFloor.value = item.floor || "";
+      fLabel.value = item.label;
+      fSub.value = item.sub || "";
+      fZone.value = item.zone || "";
+      fNote.value = item.note || "";
+      formTitle.textContent = `✏️ 編輯設備：${item.panel} - ${item.add}`;
+      cancelEditBtn.style.display = "inline-block";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    function resetForm() {
+      editId.value = "";
+      fAdd.value = "";
+      fFloor.value = "";
+      fLabel.value = "";
+      fSub.value = "";
+      fZone.value = "";
+      fNote.value = "";
+      formTitle.textContent = "➕ 新增消防設備記錄";
+      cancelEditBtn.style.display = "none";
+    }
+
+    cancelEditBtn.addEventListener("click", resetForm);
+
+    window.deleteItem = function (id) {
+      const item = db.find(x => x.id === id);
+      if (!item || !confirm(`確定要刪除「${item.panel} ${item.add} (${item.label})」嗎？`)) return;
+      db = db.filter(x => x.id !== id);
+      persist();
+      showToast("🗑️ 已刪除記錄");
+    };
+
+    window.resetToDefault = function () {
+      if (!confirm("確定要清除所有自訂修改，還原為出場預設的 1,800+ 筆資料嗎？")) return;
+      localStorage.removeItem("AFA_CUSTOM_DATA_V1");
+      db = [...window.AFA_DEFAULT_DATA];
+      renderTable();
+      showToast("🔄 已還原出場預設資料");
+    };
+
+    window.exportDataJS = function () {
+      const jsContent = `// 自動匯出於 ${new Date().toLocaleString()}\nwindow.AFA_DEFAULT_DATA = ${JSON.stringify(db, null, 2)};\nwindow.getAFAData = function() {\n  try {\n    const s = localStorage.getItem("AFA_CUSTOM_DATA_V1");\n    if (s) return JSON.parse(s);\n  } catch(e) {}\n  return window.AFA_DEFAULT_DATA;\n};\nwindow.AFA_DATA = window.getAFAData();\n`;
+      const blob = new Blob([jsContent], { type: "application/javascript;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "data.js";
+      a.click();
+      showToast("📥 已下載最新 data.js");
+    };
+
+    window.exportCSV = function () {
+      const headers = ["Panel", "Address", "Type", "Floor", "Label", "Extend_Label", "CBE_Zone", "Note"];
+      const rows = db.map(i => [i.panel, i.add, i.type, i.floor, i.label, i.sub, i.zone, i.note].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","));
+      const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "AFA_Point_Schedule.csv";
+      a.click();
+    };
+
+    window.importJSON = function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (Array.isArray(parsed)) {
+            db = parsed;
+            persist();
+            showToast("✅ 匯入成功！");
+          }
+        } catch (err) {
+          alert("JSON 格式不正確！");
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    // 滾動監聽：顯示/隱藏右下角「返回至頂」按鈕
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 260) {
+        backToTopBtn.classList.add("show");
+      } else {
+        backToTopBtn.classList.remove("show");
+      }
+    }, { passive: true });
+
+    backToTopBtn.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    adminSearch.addEventListener("input", renderTable);
+    renderTable();
+  </script>
+</body>
+</html>
