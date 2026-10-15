@@ -25,13 +25,13 @@
         /* 🌟 個人選單與下拉樣式 */
         .profile-trigger { cursor: pointer; user-select: none; position: relative; z-index: 10; display: inline-flex; align-items: center; background: rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 8px; color: white; font-weight: bold; font-size: 14px; transition: 0.2s; border: 1px solid rgba(255,255,255,0.3); }
         .profile-trigger:active { background: rgba(255,255,255,0.3); }
-        .profile-dropdown-content { display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; width: 140px; z-index: 1000; border: 1px solid #eee; }
+        .profile-dropdown-content { display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; width: 150px; z-index: 1000; border: 1px solid #eee; }
         .profile-dropdown-content.active { display: block; animation: fadeIn 0.2s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         
         /* 🌟 彈窗與浮動按鈕樣式 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); box-sizing: border-box; }
         .fab-back-admin {
             position: fixed; bottom: 20px; left: 20px; width: 55px; height: 55px;
             background-color: #6c757d; color: white; border-radius: 50%;
@@ -40,6 +40,30 @@
             z-index: 1000; border: none; transition: transform 0.2s; text-decoration: none;
         }
         .fab-back-admin:active { transform: scale(0.9); }
+
+        /* 🌟 其他功能選單按鈕樣式 */
+        .other-fn-bar {
+            width: 100%; max-width: 600px; margin-bottom: 15px; display: flex; justify-content: flex-end;
+        }
+        .other-fn-trigger {
+            background: #ffffff; color: var(--primary); border: 2px solid var(--primary);
+            padding: 10px 18px; border-radius: 8px; font-size: 15px; font-weight: bold;
+            cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: 0.2s;
+            display: inline-flex; align-items: center; gap: 6px; width: 100%; justify-content: center;
+        }
+        .other-fn-trigger:active { background: var(--primary); color: #ffffff; }
+        .fn-option-list { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+        .fn-option-btn {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 18px; border-radius: 10px; border: 1px solid #e2e8f0;
+            background: #f8fafc; color: #1e293b; font-size: 16px; font-weight: bold;
+            cursor: pointer; text-decoration: none; transition: 0.2s;
+        }
+        .fn-option-btn:hover, .fn-option-btn:active {
+            background: #ede9fe; border-color: var(--primary); color: var(--primary);
+        }
+        .fn-option-left { display: flex; align-items: center; gap: 12px; }
+        .fn-option-icon { font-size: 22px; }
     </style>
 </head>
 <body>
@@ -49,6 +73,7 @@
         <div style="position: relative;">
             <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)">👤 載入中 ▼</div>
             <div id="profileMenu" class="profile-dropdown-content">
+                <button class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 8px; margin-top:0;" onclick="window.openOtherFunctionsModal()">🧰 其他功能</button>
                 <button class="btn btn-warning" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 8px; margin-top:0;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
                 <button class="btn btn-info" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 8px; margin-top:0;" onclick="window.openIssuedWorkOrdersModal()">📤 已發工單</button>
                 <button class="btn btn-danger" style="width: 100%; padding: 10px; font-size: 14px; margin: 0;" onclick="window.performLogout()">🚪 登出系統</button>
@@ -60,6 +85,13 @@
     <div id="dailyNoticeContainer" style="display:none; width: 100%; max-width: 600px; background:#fff3cd; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box;">
         <h4 style="margin: 0 0 10px 0; color: #856404;">📢 今日特別注意事項</h4>
         <div id="dailyNoticeList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    </div>
+
+    <!-- 🌟 快捷「其他功能」入口按鈕 -->
+    <div class="other-fn-bar">
+        <button class="other-fn-trigger" onclick="window.openOtherFunctionsModal()">
+            🧰 其他功能 (電話薄 / 消防碼 / 日常須知)
+        </button>
     </div>
 
     <div class="card">
@@ -104,6 +136,41 @@
     <!-- 管理員返回後台浮動按鈕 -->
     <button id="adminBackBtn" class="fab-back-admin" onclick="window.location.replace('../admin_dashboard/')">⬅️</button>
 
+    <!-- 🌟 新增：「其他功能」彈窗 (3個選項：電話薄、消防碼、日常須知) -->
+    <div id="otherFunctionsModal" class="modal" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:var(--primary); display:flex; align-items:center; gap:8px;">🧰 其他功能選單</h3>
+            <p style="font-size:13px; color:#666; margin-top:-6px;">請選擇您要使用的輔助工具：</p>
+            <div class="fn-option-list">
+                <!-- 選項 1：電話薄 -->
+                <button class="fn-option-btn" onclick="window.openPhonebook()">
+                    <div class="fn-option-left">
+                        <span class="fn-option-icon">📞</span>
+                        <span>電話薄</span>
+                    </div>
+                    <span>➔</span>
+                </button>
+                <!-- 選項 2：消防碼 (跳轉至 ../afa/) -->
+                <button class="fn-option-btn" onclick="window.location.href='../afa/'">
+                    <div class="fn-option-left">
+                        <span class="fn-option-icon">🔥</span>
+                        <span>消防碼</span>
+                    </div>
+                    <span>➔</span>
+                </button>
+                <!-- 選項 3：日常須知 -->
+                <button class="fn-option-btn" onclick="window.openDailyGuide()">
+                    <div class="fn-option-left">
+                        <span class="fn-option-icon">📖</span>
+                        <span>日常須知</span>
+                    </div>
+                    <span>➔</span>
+                </button>
+            </div>
+            <button class="btn btn-secondary" style="margin-top: 18px;" onclick="document.getElementById('otherFunctionsModal').style.display='none'">關閉視窗</button>
+        </div>
+    </div>
+
     <!-- 更改密碼彈窗 -->
     <div id="selfPasswordModal" class="modal">
         <div class="modal-content" style="max-width: 400px; padding: 25px;">
@@ -117,7 +184,8 @@
             </div>
         </div>
     </div>
-    <!-- 新增：已發工單追蹤 Modal -->
+
+    <!-- 已發工單追蹤 Modal -->
     <div id="issuedWorkOrdersModal" class="modal">
         <div class="modal-content" style="max-width: 800px; width: 95%; padding: 25px;">
             <h3 style="color: var(--info); margin-top:0;">📤 已派發的工單追蹤</h3>
@@ -145,6 +213,7 @@
             </div>
         </div>
     </div>
+
     <script type="module">
         // 🌟 1. 從上一層的共用檔案中「匯入」設定與工具
         import { db, auth, escapeHTML, getLocalDateStr } from '../firebase-config.js';
@@ -159,15 +228,27 @@
         window.escapeHTML = escapeHTML;
         window.getLocalDateStr = getLocalDateStr;
 
-        // 🌟 4. 下面這些是本頁「物業助理」專用的變數，必須保留！
+        // 🌟 4. 本頁「物業助理」專用的變數
         let currentUser = null;
         let currentPhotoBase64 = "";
-        
         let userDocListener = null;
 
-        // ==========================================
-        // 接下來就順順地接續你原本的登入驗證程式碼...
-        // ==========================================
+        // --- 🌟 其他功能選單控制 ---
+        window.openOtherFunctionsModal = function() {
+            const menu = document.getElementById('profileMenu');
+            if (menu) menu.classList.remove('active');
+            document.getElementById('otherFunctionsModal').style.display = 'flex';
+        };
+
+        window.openPhonebook = function() {
+            // 若日後建立獨立電話薄資料夾，可改為: window.location.href = '../phonebook/';
+            alert("📞 電話薄功能準備中！");
+        };
+
+        window.openDailyGuide = function() {
+            // 若日後建立獨立日常須知資料夾，可改為: window.location.href = '../daily-guide/';
+            alert("📖 日常須知功能準備中！");
+        };
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -313,7 +394,7 @@
             const btn = document.getElementById('submitBtn');
             const msg = document.getElementById('statusMsg');
             btn.disabled = true; btn.innerText = "⏳ 傳送中...";
-            const dateStr = window.getLocalDateStr(false); // 🌟 改用本地時間
+            const dateStr = window.getLocalDateStr(false);
         
             try {
                 const q = query(collection(db, "workOrders"), where("department", "==", dept));
@@ -393,20 +474,18 @@
                 else alert("❌ 更新失敗：" + e.message); 
             }
         };
-        // 🌟 新增：打開「已發工單」視窗並讀取資料
+
+        // --- 打開「已發工單」視窗並讀取資料 ---
         window.openIssuedWorkOrdersModal = async function() {
-            // 先關閉個人下拉選單
             document.getElementById('profileMenu').classList.remove('active');
             
             const modal = document.getElementById('issuedWorkOrdersModal');
             const tbody = document.getElementById('issuedWorkOrdersTableBody');
             
-            // 打開視窗並顯示載入中
             modal.style.display = 'flex';
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">讀取雲端工單資料中...</td></tr>';
             
             try {
-                // 從資料庫抓取工單，並利用 dispatcherUsername 過濾出屬於自己發的單
                 const q = query(collection(db, "workOrders"), where("dispatcherUsername", "==", currentUser.username));
                 const querySnapshot = await getDocs(q);
                 
@@ -415,7 +494,6 @@
                     orders.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // 根據單號(包含日期)進行反向排序 (最新的在最上面)
                 orders.sort((a, b) => (b.refNumber || "").localeCompare(a.refNumber || ""));
                 
                 tbody.innerHTML = '';
@@ -425,16 +503,14 @@
                     return;
                 }
                 
-                // 渲染工單資料到表格中
                 orders.forEach(order => {
-                    let statusClass = 'badge-warning'; // 待處理
+                    let statusClass = 'badge-warning';
                     let statusText = order.status || '待處理';
                     if (order.status === '已完成') statusClass = 'badge-success';
                     else if (order.status === '跟進中') statusClass = 'badge-info';
                     
                     let statusBadge = `<span style="display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:bold; background-color:${statusClass==='badge-success'?'#d4edda':(statusClass==='badge-info'?'#cce5ff':'#fff3cd')}; color:${statusClass==='badge-success'?'#155724':(statusClass==='badge-info'?'#004085':'#856404')};">${window.escapeHTML(statusText)}</span>`;
                     
-                    // 🌟 新增 1：在狀態標籤下方，顯示「跟進中」或「已完成」的人員名字
                     const personName = order.completer || order.assignee;
                     if ((order.status === '跟進中' || order.status === '已完成') && personName) {
                         statusBadge += `<br><span style="font-size:11px; color:var(--primary); font-weight:bold; display:inline-block; margin-top:4px;">👤 ${window.escapeHTML(personName)}</span>`;
@@ -445,12 +521,10 @@
                     const safeLoc = window.escapeHTML(order.location);
                     let safeDesc = window.escapeHTML(order.description || '無文字說明');
                     
-                    // 🌟 新增 2：如果有結案備註，優雅地顯示在說明文字的下方
                     if (order.status === '已完成' && order.completionRemark) {
                         safeDesc += `<div style="margin-top:8px; padding:6px; background:#e8f4fd; border-radius:4px; font-size:12px; color:#0056b3; border-left: 3px solid #0056b3;"><strong>結案備註：</strong><br>${window.escapeHTML(order.completionRemark)}</div>`;
                     }
 
-                    // 🌟 計算派發與完成時間
                     let timeDisplay = `<div style="color:#666;">${window.escapeHTML(order.dispatchTime || '-')}</div>`;
                     if (order.status === '已完成') {
                         const cTime = order.completeTime || order.completedTime || order.finishTime;
