@@ -6,21 +6,174 @@
     <link rel="stylesheet" href="shared.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>大樓巡邏系統 - 手機助理端</title>
+    <style>
+        /* 🌟 修正電腦版 shared.css 左右並排問題，強制改為上下垂直滿版配置 */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+            background-color: #f4f6f9;
+        }
+
+        /* 🌟 頂部列固定在最上方，佔滿 100% 寬度 */
+        .topbar {
+            width: 100% !important;
+            height: auto !important;
+            min-height: 54px !important;
+            padding: 10px 15px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            background: white !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+            box-sizing: border-box !important;
+            flex-shrink: 0 !important;
+            position: relative !important;
+            z-index: 1000 !important;
+        }
+
+        #topbarTitle {
+            margin: 0 !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            color: #2c3e50 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        /* 🌟 頭像按鈕緊湊顯示於右上角 */
+        .profile-trigger {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            font-size: 14px !important;
+            padding: 6px 12px !important;
+            border-radius: 20px !important;
+            background: #eef2ff !important;
+            color: #1a73e8 !important;
+            font-weight: bold !important;
+            white-space: nowrap !important;
+            cursor: pointer !important;
+        }
+
+        /* 🌟 主內容區佔滿 100% 寬度，字體恢復正常大小 */
+        .main-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            flex: 1 1 auto !important;
+            height: calc(100vh - 115px) !important;
+            overflow-y: auto !important;
+            box-sizing: border-box !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .content-body {
+            width: 100% !important;
+            padding: 12px !important;
+            padding-bottom: 90px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 🌟 其他功能三選項按鈕樣式 */
+        .fn-option-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+        .fn-option-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 18px;
+            border-radius: 10px;
+            border: 1px solid #dce1e7;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .fn-option-btn:active {
+            background: #e8f0fe;
+            border-color: #1a73e8;
+            color: #1a73e8;
+        }
+        .fn-option-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .fn-option-icon {
+            font-size: 22px;
+        }
+    </style>
 </head>
 <body onclick="window.closeProfileMenu(event)">
 
-    <!-- 手機版精簡頂部列 -->
-    <div class="topbar" style="padding: 15px; display: flex; justify-content: space-between; align-items: center; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <h2 id="topbarTitle" style="margin: 0; font-size: 18px;">載入中...</h2>
-        <div style="position: relative;">
-            <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)" style="font-size: 13px; padding: 6px 10px;"></div>
-            <div id="profileMenu" class="profile-dropdown-content" style="right: 0; left: auto;">
+    <!-- 手機版精簡頂部列 (固定於上方) -->
+    <div class="topbar">
+        <h2 id="topbarTitle">載入中...</h2>
+        <div style="position: relative; flex-shrink: 0;">
+            <div id="currentUserDisplay" class="profile-trigger" onclick="window.toggleProfileMenu(event)"></div>
+            <div id="profileMenu" class="profile-dropdown-content" style="right: 0; left: auto; min-width: 150px;">
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openOtherFunctionsModal()">🧰 其他功能</button>
                 <button class="btn btn-info" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openIssuedWorkOrdersModal()">📤 已發工單</button>
                 <button class="btn btn-warning" style="width: 100%; margin-bottom: 8px; font-size: 14px;" onclick="window.openSelfPasswordModal()">🔑 更改密碼</button>
                 <button class="btn btn-danger" style="width: 100%; margin: 0; font-size: 14px;" onclick="window.performLogout()">🚪 登出系統</button>
             </div>
         </div>
     </div>
+
+    <!-- 手機版主內容區 (100% 滿版寬度) -->
+    <div class="main-content" id="mainContentContainer" style="display: none;">
+        <div class="content-body">
+            
+            <!-- 手機版專屬：主頁 (各部門跳轉 + 其他功能) -->
+            <div id="view-mobile-home" class="view-section active">
+                <div class="card" style="text-align: center;">
+                    <h3 style="margin-top:0; color: var(--primary);">跳轉至各部門系統</h3>
+                    <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 16px; margin-bottom: 12px;" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</button>
+                    <button class="btn btn-info" style="width: 100%; padding: 15px; font-size: 16px; margin-bottom: 12px;" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</button>
+                    <button class="btn btn-warning" style="width: 100%; padding: 15px; font-size: 16px; margin-bottom: 12px;" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</button>
+                    <button class="btn btn-success" style="width: 100%; padding: 15px; font-size: 16px; margin-bottom: 0; background-color: #6f42c1; border-color: #6f42c1;" onclick="window.openOtherFunctionsModal()">🧰 其他功能 (電話薄 / 消防碼 / 日常須知)</button>
+                </div>
+            </div>
+            
+            <!-- 視圖：特別事項通知 -->
+            <div id="view-notices" class="view-section">
+                <div class="card">
+                    <div class="card-header">📢 特別通知</div>
+                    <table style="width: 100%;">
+                        <tbody id="noticesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 視圖：物業助理需求通知 -->
+            <div id="view-assistant" class="view-section">
+                <div class="card">
+                    <div class="card-header">🔔 助理需求通知</div>
+                    <table style="width: 100%;">
+                        <tbody id="assistantRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> 
+    </div> 
 
     <!-- 手機版底部導覽列 -->
     <div class="mobile-bottom-nav" style="display: flex;">
@@ -31,46 +184,44 @@
             🔔<br>助理需求
             <span id="assistantBadge" class="nav-badge" style="display:none;">0</span>
         </div>
+        <div class="nav-item" onclick="window.openOtherFunctionsModal()">🧰<br>其他功能</div>
     </div>
 
-    <div class="main-content" id="mainContentContainer" style="display: none; height: calc(100vh - 60px); overflow-y: auto;">
-        <div class="content-body" style="padding: 10px; padding-bottom: 80px;">
-            
-            <!-- 手機版專屬：主頁 (各部門跳轉) -->
-            <div id="view-mobile-home" class="view-section active">
-                <div class="card" style="text-align: center;">
-                    <h3 style="margin-top:0; color: var(--primary);">跳轉至各部門系統</h3>
-                    <button class="btn btn-primary" style="padding: 15px; font-size: 16px; margin-bottom: 15px;" onclick="window.open('../assist-5x9k2/', '_blank')">📋 物業助理派單系統</button>
-                    <button class="btn btn-info" style="padding: 15px; font-size: 16px; margin-bottom: 15px;" onclick="window.open('../engineering/', '_blank')">🔧 工程部派單後台</button>
-                    <button class="btn btn-warning" style="padding: 15px; font-size: 16px; margin-bottom: 0;" onclick="window.open('../cleaning/', '_blank')">🧹 清潔部派單後台</button>
-                </div>
+    <!-- 🌟 新增：「其他功能」彈窗 (3個選項：電話薄、消防碼、日常須知) -->
+    <div id="otherFunctionsModal" class="modal" onclick="if(event.target===this) window.closeModal('otherFunctionsModal')">
+        <div class="modal-content" style="width:92%; max-width:400px;">
+            <h3 style="margin-top:0; color:var(--primary); display:flex; align-items:center; gap:8px;">🧰 其他功能選單</h3>
+            <p style="font-size:13px; color:#666; margin-top:-6px;">請選擇您要使用的輔助工具：</p>
+            <div class="fn-option-list">
+                <!-- 選項 1：電話薄 -->
+                <button class="fn-option-btn" onclick="window.openPhonebook()">
+                    <div class="fn-option-left">
+                        <span class="fn-option-icon">📞</span>
+                        <span>電話薄</span>
+                    </div>
+                    <span>➔</span>
+                </button>
+                <!-- 選項 2：消防碼 (跳轉至 ../afa/) -->
+                <button class="fn-option-btn" onclick="window.location.href='../afa/'">
+                    <div class="fn-option-left">
+                        <span class="fn-option-icon">🔥</span>
+                        <span>消防碼</span>
+                    </div>
+                    <span>➔</span>
+                </button>
+                <!-- 選項 3：日常須知 -->
+                <button class="fn-option-btn" onclick="window.openDailyGuide()">
+                    <div class="fn-option-left">
+                        <span class="fn-option-icon">📖</span>
+                        <span>日常須知</span>
+                    </div>
+                    <span>➔</span>
+                </button>
             </div>
-            
-            <!-- 視圖：特別事項通知 -->
-            <div id="view-notices" class="view-section">
-                <div class="card">
-                    <div class="card-header">📢 特別通知</div>
-                    <table>
-                        <tbody id="noticesTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 18px;" onclick="window.closeModal('otherFunctionsModal')">關閉視窗</button>
+        </div>
+    </div>
 
-            <!-- 視圖：物業助理需求通知 -->
-            <div id="view-assistant" class="view-section">
-                <div class="card">
-                    <div class="card-header">🔔 助理需求通知</div>
-                    <table>
-                        <tbody id="assistantRequestsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div> 
-    </div> 
-
-    <!-- 手機端會用到的 Modal (省略了電腦版專屬的路線與報表 Modal) -->
-    
     <!-- 新增與編輯特別事項通知 -->
     <div id="noticeModal" class="modal">
         <div class="modal-content" style="width:95%;">
@@ -79,7 +230,7 @@
             <div class="form-group"><label>通知內容</label><textarea id="noticeTextInput" class="form-control" rows="3"></textarea></div>
             <div class="form-group"><label>生效日期</label><input type="date" id="noticeStartDate" class="form-control"></div>
             <div class="form-group"><label>結束日期</label><input type="date" id="noticeEndDate" class="form-control"></div>
-            <div class="form-group" style="display:none;"> <!-- 手機端預設全選，不顯示繁雜選項以節省版面 -->
+            <div class="form-group" style="display:none;">
                 <input type="checkbox" class="notice-dept-chk" value="工程部" checked><input type="checkbox" class="notice-dept-chk" value="清潔部" checked>
                 <input type="checkbox" class="notice-dept-chk" value="管理部" checked><input type="checkbox" class="notice-dept-chk" value="物業助理" checked>
                 <input type="checkbox" class="notice-dept-chk" value="全體" checked>
@@ -168,5 +319,22 @@
     
     <!-- 引入拆分出來的共用 JavaScript -->
     <script type="module" src="app.js"></script>
+
+    <!-- 🌟 其他功能選單控制腳本 -->
+    <script>
+        window.openOtherFunctionsModal = function() {
+            const profileMenu = document.getElementById('profileMenu');
+            if (profileMenu) profileMenu.classList.remove('active');
+            document.getElementById('otherFunctionsModal').style.display = 'flex';
+        };
+
+        window.openPhonebook = function() {
+            alert("📞 電話薄功能準備中！");
+        };
+
+        window.openDailyGuide = function() {
+            alert("📖 日常須知功能準備中！");
+        };
+    </script>
 </body>
 </html>
